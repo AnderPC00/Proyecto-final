@@ -313,6 +313,18 @@ def cargar_carrito_usuario(user_id):
     conn.close()
     return carrito
 
+@app.route('/api/remove_from_cart/<int:producto_id>', methods=['POST'])
+def api_remove_from_cart(producto_id):
+    if 'cart' in session:
+        cart = session['cart']
+        if str(producto_id) in cart:
+            del cart[str(producto_id)]
+            session['cart'] = cart
+            return jsonify({'message': 'Producto eliminado correctamente'}), 200
+        else:
+            return jsonify({'error': 'Producto no encontrado en el carrito'}), 404
+    return jsonify({'error': 'Carrito no encontrado'}), 400
+
 @app.route('/update_cart/<int:producto_id>', methods=['POST'])
 def update_cart(producto_id):
     if 'cart' in session:
@@ -351,6 +363,25 @@ def update_cart(producto_id):
             flash('Producto no encontrado.', 'error')
 
     return redirect(url_for('carrito'))
+
+@app.route('/api/update_cart/<int:producto_id>', methods=['POST'])
+def api_update_cart(producto_id):
+    data = request.get_json()  # Asegúrate de que se está recibiendo JSON
+    nueva_cantidad = data.get('cantidad')
+
+    if nueva_cantidad is None or nueva_cantidad < 1:
+        return jsonify({'error': 'Cantidad inválida'}), 400
+
+    if 'cart' not in session:
+        return jsonify({'error': 'Carrito no encontrado'}), 400
+
+    cart = session['cart']
+    if str(producto_id) in cart:
+        cart[str(producto_id)] = nueva_cantidad
+        session['cart'] = cart
+        return jsonify({'message': 'Cantidad actualizada correctamente'}), 200
+    else:
+        return jsonify({'error': 'Producto no encontrado en el carrito'}), 404
 
 @app.route('/checkout', methods=['POST'])
 def checkout():
@@ -399,6 +430,35 @@ def checkout():
     session['cart'] = {}
 
     return redirect(url_for('home'))
+
+@app.route('/api/checkout', methods=['POST'])
+def api_checkout():
+    if 'cart' not in session or not session['cart']:
+        return jsonify({'message': 'El carrito está vacío'}), 400
+
+    cart = session['cart']
+    total = 0
+    cnx = get_db_connection()
+    cursor = cnx.cursor(dictionary=True)
+
+    # Calcular el total del carrito
+    for producto_id, cantidad in cart.items():
+        cursor.execute('SELECT precio, stock FROM productos WHERE id = %s', (producto_id,))
+        producto = cursor.fetchone()
+        if producto:
+            if producto['stock'] < cantidad:
+                return jsonify({'message': f"No hay suficiente stock para {producto['nombre']}."}), 400
+            total += producto['precio'] * cantidad
+            # Reducir el stock
+            cursor.execute('UPDATE productos SET stock = stock - %s WHERE id = %s', (cantidad, producto_id))
+
+    cnx.commit()
+    cnx.close()
+
+    # Vaciar el carrito después del pago
+    session.pop('cart', None)
+
+    return jsonify({'message': 'Pago realizado con éxito', 'total': total}), 200
 
 @app.route('/historial')
 @login_required
