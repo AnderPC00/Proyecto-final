@@ -6,13 +6,13 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import mysql.connector
 
 app = Flask(__name__)
+
 app.secret_key = '2163'
 app.config['SESSION_TYPE'] = 'filesystem'
-CORS(app)
-
-# Configuración para la sesión
-
+app.config['SECRET_KEY'] = '2163'
 app.config['SESSION_PERMANENT'] = False
+Session(app)
+CORS(app, supports_credentials=True)
 
 # Configuración de Flask-Login
 login_manager = LoginManager()
@@ -86,6 +86,27 @@ def login():
         flash('Usuario o contraseña incorrectos', 'danger')
         return redirect(url_for('login'))
     return render_template('login.html')
+
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+
+    cnx = get_db_connection()
+    cursor = cnx.cursor(dictionary=True)
+    
+    cursor.execute('SELECT id, password FROM usuarios WHERE username = %s', (username,))
+    user = cursor.fetchone()
+    
+    if user and check_password_hash(user['password'], password):
+        login_user(User(user['id']))
+        session['cart'] = cargar_carrito_usuario(user['id'])
+        cnx.close()
+        return jsonify({'message': 'Sesión iniciada correctamente'})
+    
+    cnx.close()
+    return jsonify({'error': 'Usuario o contraseña incorrectos'}), 401
 
 @app.route('/logout')
 @login_required
@@ -182,32 +203,35 @@ def add_to_cart(producto_id):
 
 @app.route('/api/add_to_cart/<int:producto_id>', methods=['POST'])
 def api_add_to_cart(producto_id):
-    data = request.json
+    data = request.get_json()
     cantidad = data.get('cantidad', 1)
 
+    # Si no existe el carrito en la sesión, lo creamos
     if 'cart' not in session:
         session['cart'] = {}
 
     cart = session['cart']
 
-    # Verificar el stock del producto
+    # Conectamos a la base de datos para verificar el stock del producto
     cnx = get_db_connection()
     cursor = cnx.cursor(dictionary=True)
     cursor.execute('SELECT stock FROM productos WHERE id = %s', (producto_id,))
     producto = cursor.fetchone()
 
-    if not producto or producto['stock'] < cantidad:
-        return jsonify({'error': 'No hay suficiente stock'}), 400
+    if producto:
+        cantidad_total = cart.get(str(producto_id), 0) + cantidad
+        if cantidad_total > producto['stock']:
+            cnx.close()
+            return jsonify({"message": "No puedes añadir más productos de los que hay en stock"}), 400
 
-    cantidad_total = cart.get(str(producto_id), 0) + cantidad
-    if cantidad_total > producto['stock']:
-        return jsonify({'error': f'No puedes añadir más de {producto["stock"]} productos al carrito.'}), 400
-
-    # Actualizar el carrito
-    cart[str(producto_id)] = cantidad_total
-    session['cart'] = cart
-
-    return jsonify({'message': 'Producto añadido al carrito'}), 200
+        # Actualizamos el carrito en la sesión
+        cart[str(producto_id)] = cantidad_total
+        session['cart'] = cart
+        cnx.close()
+        return jsonify({"message": "Producto añadido al carrito con éxito"}), 200
+    else:
+        cnx.close()
+        return jsonify({"message": "Producto no encontrado"}), 404
 
 @app.route('/carrito')
 def carrito():
@@ -233,23 +257,26 @@ def carrito():
 @app.route('/api/carrito', methods=['GET'])
 def api_carrito():
     if 'cart' not in session:
-        return jsonify([])
+        return jsonify({"productos": [], "total": 0})
 
     cart = session['cart']
     productos_con_cantidades = []
+    total = 0
 
-    # Conectar a la base de datos y obtener los productos
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cnx = get_db_connection()
+    cursor = cnx.cursor(dictionary=True)
 
-    producto_ids = list(cart.keys())
-    if producto_ids:
+    if cart:
+        # Obtenemos los productos del carrito
+        producto_ids = list(cart.keys())
         cursor.execute('SELECT id, nombre, precio, stock FROM productos WHERE id IN (%s)' % ','.join(['%s'] * len(producto_ids)), producto_ids)
         productos = cursor.fetchall()
 
+        # Calculamos el total y preparamos los productos con sus cantidades
         for producto in productos:
-            producto_id = producto['id']
-            cantidad = cart.get(str(producto_id), 0)
+            producto_id = str(producto['id'])
+            cantidad = cart.get(producto_id, 0)
+            total += producto['precio'] * cantidad
             productos_con_cantidades.append({
                 'id': producto['id'],
                 'nombre': producto['nombre'],
@@ -258,8 +285,8 @@ def api_carrito():
                 'stock': producto['stock']
             })
 
-    conn.close()
-    return jsonify(productos_con_cantidades)
+    cnx.close()
+    return jsonify({"productos": productos_con_cantidades, "total": total})
 
 @app.route('/remove_from_cart/<int:producto_id>', methods=['POST'])
 def remove_from_cart(producto_id):

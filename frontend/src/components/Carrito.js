@@ -6,14 +6,16 @@ const Carrito = () => {
     const [total, setTotal] = useState(0);
 
     useEffect(() => {
-        axios.get('http://localhost:5000/api/carrito')
-            .then(response => {
-                setProductos(response.data.productos);
-                setTotal(response.data.total);
-            })
-            .catch(error => {
-                console.error('Error al cargar el carrito:', error);
-            });
+        axios.get('http://localhost:5000/api/carrito', {
+            withCredentials: true  // Esto asegura que se envíen las cookies de sesión
+        })
+        .then(response => {
+            setProductos(response.data.productos);
+            setTotal(response.data.total);
+        })
+        .catch(error => {
+            console.error('Error al cargar el carrito:', error);
+        });
     }, []);    
 
     const handleUpdateCantidad = (productoId, nuevaCantidad) => {

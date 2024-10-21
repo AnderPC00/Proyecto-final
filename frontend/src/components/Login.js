@@ -10,14 +10,18 @@ const Login = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    axios.post('http://localhost:5000/login', { username, password })
-      .then(response => {
-        // Si el login es exitoso
-        navigate('/productos');  // Redirigir a la página de productos o donde prefieras
-      })
-      .catch(error => {
-        console.error("Error al iniciar sesión:", error);
-      });
+    axios.post('http://localhost:5000/api/login', { username, password }, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(response => {
+      alert('Sesión iniciada correctamente');
+      navigate('/productos');
+    })
+    .catch(error => {
+      console.error("Error al iniciar sesión:", error);
+    });
   };
 
   return (
