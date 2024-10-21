@@ -302,5 +302,31 @@ def update_cart(producto_id):
 
     return redirect(url_for('carrito'))
 
+@app.route('/checkout', methods=['POST'])
+def checkout():
+    # Revisar si hay productos en el carrito
+    if 'cart' not in session or not session['cart']:
+        flash('El carrito está vacío. Añade productos antes de proceder al pago.', 'error')
+        return redirect(url_for('carrito'))
+    
+    # Simulación de proceso de pago
+    # Integrar una pasarela de pago real en el futuro
+
+    # Actualizar el stock de los productos en el carrito
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    for producto_id, cantidad in session['cart'].items():
+        cursor.execute('UPDATE productos SET stock = stock - %s WHERE id = %s', (cantidad, producto_id))
+
+    conn.commit()
+
+    # Vaciar el carrito después del pago
+    session['cart'] = {}
+
+    # Mensaje de éxito de compra
+    flash('Pago realizado con éxito. Gracias por tu compra.', 'success')
+    return redirect(url_for('home'))
+
 if __name__ == '__main__':
     app.run(debug=True)

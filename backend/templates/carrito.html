@@ -27,9 +27,9 @@
 
     <h3>Total: €{{ total }}</h3>
 
-    <form action="/checkout" method="post">
+    <form action="{{ url_for('checkout') }}" method="post">
         <button type="submit" {% if hay_productos_sin_stock %}disabled{% endif %}>Proceder al pago</button>
-    </form>
+    </form>    
 
 {% else %}
     <p>El carrito está vacío.</p>
