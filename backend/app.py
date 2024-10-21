@@ -30,7 +30,34 @@ config = {
 
 @app.route('/')
 def home():
-    return render_template('index.html')
+    # Inicializa las variables para manejar el carrito vacío
+    productos_con_cantidades = []
+    total = 0
+
+    if 'cart' in session and session['cart']:
+        cart = session['cart']
+
+        # Conectar a la base de datos y obtener los productos
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        producto_ids = list(cart.keys())
+
+        if producto_ids:
+            cursor.execute('SELECT * FROM productos WHERE id IN (%s)' % ','.join(['%s'] * len(producto_ids)), producto_ids)
+            productos = cursor.fetchall()
+
+            for producto in productos:
+                producto_id = producto['id']
+                cantidad = cart.get(str(producto_id), 0)
+                subtotal = producto['precio'] * cantidad
+                total += subtotal
+                productos_con_cantidades.append({**producto, 'cantidad': cantidad, 'subtotal': subtotal})
+
+        conn.close()
+
+    return render_template('index.html', total=total, productos=productos_con_cantidades)
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
