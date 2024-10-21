@@ -1,25 +1,29 @@
 body {
     font-family: Arial, sans-serif;
-  }
-  
-  h1 {
-    color: #333;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
   }
   
   nav ul {
     list-style-type: none;
+    padding: 0;
+    background-color: #333;
+    overflow: hidden;
   }
   
   nav ul li {
-    display: inline;
-    margin-right: 10px;
+    float: left;
   }
   
-  ul {
-    padding: 0;
+  nav ul li a {
+    display: block;
+    color: white;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
   }
   
-  li {
-    padding: 8px 0;
-    border-bottom: 1px solid #ddd;
+  nav ul li a:hover {
+    background-color: #111;
   }  

@@ -1,10 +1,18 @@
 from flask import Flask, render_template, redirect, url_for, request, session, flash, get_flashed_messages, jsonify
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_cors import CORS
+from flask_session import Session
 from werkzeug.security import generate_password_hash, check_password_hash
 import mysql.connector
 
 app = Flask(__name__)
 app.secret_key = '2163'
+app.config['SESSION_TYPE'] = 'filesystem'
+CORS(app)
+
+# Configuración para la sesión
+
+app.config['SESSION_PERMANENT'] = False
 
 # Configuración de Flask-Login
 login_manager = LoginManager()
@@ -134,7 +142,7 @@ def api_productos():
     try:
         cnx = get_db_connection()
         cursor = cnx.cursor(dictionary=True)
-        cursor.execute('SELECT id, nombre, precio FROM productos')
+        cursor.execute('SELECT id, nombre, precio, stock FROM productos') 
         productos = cursor.fetchall()
         cursor.close()
         cnx.close()
@@ -171,6 +179,35 @@ def add_to_cart(producto_id):
     session['cart'] = cart
     flash('Producto añadido al carrito con éxito.', 'success')
     return redirect(url_for('carrito'))
+
+@app.route('/api/add_to_cart/<int:producto_id>', methods=['POST'])
+def api_add_to_cart(producto_id):
+    data = request.json
+    cantidad = data.get('cantidad', 1)
+
+    if 'cart' not in session:
+        session['cart'] = {}
+
+    cart = session['cart']
+
+    # Verificar el stock del producto
+    cnx = get_db_connection()
+    cursor = cnx.cursor(dictionary=True)
+    cursor.execute('SELECT stock FROM productos WHERE id = %s', (producto_id,))
+    producto = cursor.fetchone()
+
+    if not producto or producto['stock'] < cantidad:
+        return jsonify({'error': 'No hay suficiente stock'}), 400
+
+    cantidad_total = cart.get(str(producto_id), 0) + cantidad
+    if cantidad_total > producto['stock']:
+        return jsonify({'error': f'No puedes añadir más de {producto["stock"]} productos al carrito.'}), 400
+
+    # Actualizar el carrito
+    cart[str(producto_id)] = cantidad_total
+    session['cart'] = cart
+
+    return jsonify({'message': 'Producto añadido al carrito'}), 200
 
 @app.route('/carrito')
 def carrito():
@@ -313,24 +350,27 @@ def checkout():
             # Reducir el stock del producto
             cursor.execute('UPDATE productos SET stock = stock - %s WHERE id = %s', (cantidad, producto_id))
 
-    # Guardar el pedido en la tabla "pedidos"
-    cursor.execute('INSERT INTO pedidos (user_id, total) VALUES (%s, %s)', (current_user.id, total))
-    pedido_id = cursor.lastrowid
+    # Si el usuario está autenticado, guardamos el pedido en la base de datos
+    if current_user.is_authenticated:
+        cursor.execute('INSERT INTO pedidos (user_id, total) VALUES (%s, %s)', (current_user.id, total))
+        pedido_id = cursor.lastrowid
 
-    # Guardar los detalles del pedido en la tabla "detalles_pedido"
-    for producto_id, cantidad in session['cart'].items():
-        cursor.execute('SELECT precio FROM productos WHERE id = %s', (producto_id,))
-        producto = cursor.fetchone()
-        if producto:
-            cursor.execute('INSERT INTO detalles_pedido (pedido_id, producto_id, cantidad, precio) VALUES (%s, %s, %s, %s)', 
-                           (pedido_id, producto_id, cantidad, producto['precio']))
+        # Guardar los detalles del pedido en la tabla "detalles_pedido"
+        for producto_id, cantidad in session['cart'].items():
+            cursor.execute('SELECT precio FROM productos WHERE id = %s', (producto_id,))
+            producto = cursor.fetchone()
+            if producto:
+                cursor.execute('INSERT INTO detalles_pedido (pedido_id, producto_id, cantidad, precio) VALUES (%s, %s, %s, %s)',
+                               (pedido_id, producto_id, cantidad, producto['precio']))
+    else:
+        # Para usuarios no autenticados, simplemente procesamos el pedido sin guardar en la base de datos
+        flash('Pago realizado con éxito. Gracias por tu compra.', 'success')
 
     conn.commit()
 
     # Vaciar el carrito después del pago
     session['cart'] = {}
 
-    flash('Pago realizado con éxito. Gracias por tu compra.', 'success')
     return redirect(url_for('home'))
 
 @app.route('/historial')

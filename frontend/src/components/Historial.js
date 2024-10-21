@@ -5,7 +5,7 @@ function Historial() {
   const [pedidos, setPedidos] = useState([]);
 
   useEffect(() => {
-    axios.get('/api/historial')
+    axios.get('http://localhost:5000/historial')
       .then(response => {
         setPedidos(response.data);
       })
