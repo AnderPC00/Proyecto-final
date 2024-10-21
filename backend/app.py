@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, request, session, flash, get_flashed_messages, jsonify
+from flask import Flask, render_template, redirect, url_for, request, session, flash, jsonify
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_cors import CORS
 from flask_session import Session
@@ -28,12 +28,8 @@ class User(UserMixin):
 def load_user(user_id):
     user = User(user_id)
     if user.is_authenticated:
-        cnx = get_db_connection()
-        cursor = cnx.cursor(dictionary=True)
-        cursor.execute('SELECT producto_id, cantidad FROM user_cart WHERE user_id = %s', (user_id,))
-        productos_en_carrito = cursor.fetchall()
-        cnx.close()
-        session['cart'] = {str(producto['producto_id']): producto['cantidad'] for producto in productos_en_carrito}
+        session['cart'] = cargar_carrito_usuario(user_id)
+        session.modified = True
     return user
 
 # Configuración de la conexión a la base de datos MySQL
@@ -63,9 +59,39 @@ def guardar_carrito_usuario(user_id, carrito):
     cursor.close()
     conn.close()
 
+def cargar_carrito_usuario(user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute('SELECT producto_id, cantidad FROM user_cart WHERE user_id = %s', (user_id,))
+    carrito = {str(item['producto_id']): item['cantidad'] for item in cursor.fetchall()}
+    cursor.close()
+    conn.close()
+    return carrito
+
 @app.route('/')
 def home():
     return render_template('index.html')
+
+@app.route('/check_session', methods=['GET'])
+def check_session():
+    if current_user.is_authenticated:
+        return jsonify({
+            "_fresh": current_user.is_authenticated,
+            "cart": session.get('cart', {})
+        })
+    else:
+        return jsonify({
+            "_fresh": False,
+            "cart": session.get('cart', {})
+        })
+    
+@app.route('/profile')
+def profile():
+    return render_template('profile.html')
+
+@app.route('/api/check_session', methods=['GET'])
+def api_check_session():
+    return jsonify(session)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -79,6 +105,7 @@ def login():
         if user and check_password_hash(user['password'], password):
             login_user(User(user['id']))
             session['cart'] = cargar_carrito_usuario(user['id'])
+            session.modified = True
             flash('Sesión iniciada correctamente.', 'success')
             cnx.close()
             return redirect(url_for('profile'))
@@ -101,7 +128,11 @@ def api_login():
     
     if user and check_password_hash(user['password'], password):
         login_user(User(user['id']))
+        
+        # Cargar el carrito del usuario desde la base de datos
         session['cart'] = cargar_carrito_usuario(user['id'])
+        session.modified = True  # Asegurar que Flask sepa que la sesión ha sido modificada
+
         cnx.close()
         return jsonify({'message': 'Sesión iniciada correctamente'})
     
@@ -114,14 +145,24 @@ def logout():
     if 'cart' in session:
         guardar_carrito_usuario(current_user.id, session['cart'])
     session.pop('cart', None)
+    session.modified = True
     logout_user()
     flash('Has cerrado sesión.', 'info')
     return redirect(url_for('home'))
 
-@app.route('/profile')
+@app.route('/api/logout', methods=['POST'])
 @login_required
-def profile():
-    return render_template('profile.html', user_id=current_user.id)
+def api_logout():
+    if 'cart' in session:
+        # Guardar el carrito en la base de datos si es necesario
+        guardar_carrito_usuario(current_user.id, session['cart'])
+    
+    # Vaciar el carrito y cerrar sesión
+    session.pop('cart', None)
+    session.modified = True  # Asegurar que Flask sepa que la sesión ha sido modificada
+    logout_user()
+    
+    return jsonify({'message': 'Cierre de sesión exitoso'})
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -177,16 +218,21 @@ def add_to_cart(producto_id):
     if 'cart' not in session:
         session['cart'] = {}
     cart = session['cart']
+    
     cnx = get_db_connection()
     cursor = cnx.cursor(dictionary=True)
     cursor.execute('SELECT stock FROM productos WHERE id = %s', (producto_id,))
     producto = cursor.fetchone()
+    
     cantidad_total = cart.get(str(producto_id), 0) + cantidad
     if cantidad_total > producto['stock']:
         flash(f"No puedes añadir más de {producto['stock']} productos al carrito.", 'error')
         cnx.close()
         return redirect(url_for('productos'))
+    
     cart[str(producto_id)] = cantidad_total
+    
+    # Si el usuario está autenticado, guardamos el carrito en la base de datos
     if current_user.is_authenticated:
         cursor.execute('SELECT cantidad FROM user_cart WHERE user_id = %s AND producto_id = %s', (current_user.id, producto_id))
         result = cursor.fetchone()
@@ -196,8 +242,10 @@ def add_to_cart(producto_id):
         else:
             cursor.execute('INSERT INTO user_cart (user_id, producto_id, cantidad) VALUES (%s, %s, %s)', (current_user.id, producto_id, cantidad))
         cnx.commit()
+    
     cnx.close()
     session['cart'] = cart
+    session.modified = True
     flash('Producto añadido al carrito con éxito.', 'success')
     return redirect(url_for('carrito'))
 
@@ -205,28 +253,30 @@ def add_to_cart(producto_id):
 def api_add_to_cart(producto_id):
     data = request.get_json()
     cantidad = data.get('cantidad', 1)
-
-    # Si no existe el carrito en la sesión, lo creamos
     if 'cart' not in session:
         session['cart'] = {}
-
     cart = session['cart']
-
-    # Conectamos a la base de datos para verificar el stock del producto
+    
+    # Verificar stock en la base de datos
     cnx = get_db_connection()
     cursor = cnx.cursor(dictionary=True)
     cursor.execute('SELECT stock FROM productos WHERE id = %s', (producto_id,))
     producto = cursor.fetchone()
-
+    
     if producto:
         cantidad_total = cart.get(str(producto_id), 0) + cantidad
         if cantidad_total > producto['stock']:
             cnx.close()
             return jsonify({"message": "No puedes añadir más productos de los que hay en stock"}), 400
 
-        # Actualizamos el carrito en la sesión
         cart[str(producto_id)] = cantidad_total
         session['cart'] = cart
+        session.modified = True
+
+        # Si el usuario está autenticado, guardamos el carrito en la base de datos
+        if current_user.is_authenticated:
+            guardar_carrito_usuario(current_user.id, session['cart'])
+
         cnx.close()
         return jsonify({"message": "Producto añadido al carrito con éxito"}), 200
     else:
@@ -240,25 +290,28 @@ def carrito():
     cart = session['cart']
     productos_con_cantidades = []
     total = 0
+    
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     producto_ids = list(cart.keys())
+    
     if producto_ids:
         cursor.execute('SELECT * FROM productos WHERE id IN (%s)' % ','.join(['%s'] * len(producto_ids)), producto_ids)
         productos = cursor.fetchall()
+        
         for producto in productos:
             producto_id = producto['id']
             cantidad = cart.get(str(producto_id), 0)
             total += producto['precio'] * cantidad
             productos_con_cantidades.append({**producto, 'cantidad': cantidad})
+    
     conn.close()
     return render_template('carrito.html', productos=productos_con_cantidades, total=total)
 
 @app.route('/api/carrito', methods=['GET'])
 def api_carrito():
     if 'cart' not in session:
-        return jsonify({"productos": [], "total": 0})
-
+        session['cart'] = {}
     cart = session['cart']
     productos_con_cantidades = []
     total = 0
@@ -267,12 +320,10 @@ def api_carrito():
     cursor = cnx.cursor(dictionary=True)
 
     if cart:
-        # Obtenemos los productos del carrito
         producto_ids = list(cart.keys())
         cursor.execute('SELECT id, nombre, precio, stock FROM productos WHERE id IN (%s)' % ','.join(['%s'] * len(producto_ids)), producto_ids)
         productos = cursor.fetchall()
 
-        # Calculamos el total y preparamos los productos con sus cantidades
         for producto in productos:
             producto_id = str(producto['id'])
             cantidad = cart.get(producto_id, 0)
@@ -480,6 +531,25 @@ def historial():
     conn.close()
 
     return render_template('historial.html', pedidos=pedidos)
+
+@app.route('/api/buscar_productos', methods=['GET'])
+def buscar_productos():
+    query = request.args.get('q', '')  # Obtener el parámetro de búsqueda 'q'
+    
+    # Conectar a la base de datos
+    cnx = get_db_connection()
+    cursor = cnx.cursor(dictionary=True)
+    
+    # Buscar productos que coincidan con el nombre o descripción
+    cursor.execute("SELECT * FROM productos WHERE nombre LIKE %s OR descripcion LIKE %s", 
+                   ('%' + query + '%', '%' + query + '%'))
+    
+    productos = cursor.fetchall()
+    cursor.close()
+    cnx.close()
+    
+    return jsonify(productos)
+
 
 if __name__ == '__main__':
     app.run(debug=True)

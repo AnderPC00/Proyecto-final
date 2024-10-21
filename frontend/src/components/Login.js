@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 const Login = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [errorMessage, setErrorMessage] = useState('');  // Estado para el mensaje de error
     const { login } = useContext(AuthContext);  // Obtén la función login del contexto
     const navigate = useNavigate();
 
@@ -18,6 +19,12 @@ const Login = () => {
                 navigate('/carrito');  // Redirige al carrito
             })
             .catch(error => {
+                if (error.response && error.response.status === 401) {
+                    // Mostrar mensaje de error si las credenciales son incorrectas
+                    setErrorMessage('Usuario o contraseña incorrectos');
+                } else {
+                    setErrorMessage('Ocurrió un error, por favor intente de nuevo');
+                }
                 console.error('Error al iniciar sesión:', error);
             });
     };
@@ -25,6 +32,7 @@ const Login = () => {
     return (
         <div>
             <h1>Iniciar Sesión</h1>
+            {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>} {/* Mostrar mensaje de error */}
             <form onSubmit={handleSubmit}>
                 <input
                     type="text"

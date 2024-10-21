@@ -1,22 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { checkSession } from '../api';
 
 const Carrito = () => {
     const [productos, setProductos] = useState([]);
     const [total, setTotal] = useState(0);
 
     useEffect(() => {
-        axios.get('http://localhost:5000/api/carrito', {
-            withCredentials: true  // Esto asegura que se envíen las cookies de sesión
-        })
-        .then(response => {
-            setProductos(response.data.productos);
-            recalcularTotal(response.data.productos);
-            console.log('Productos en el carrito:', response.data.productos);  // Log para depurar
-        })
-        .catch(error => {
-            console.error('Error al cargar el carrito:', error);
-        });
+        const cargarCarrito = () => {
+            axios.get('http://localhost:5000/api/carrito', {
+                withCredentials: true  // Enviar cookies de sesión
+            })
+            .then(response => {
+                setProductos(response.data.productos);
+                recalcularTotal(response.data.productos);
+                console.log('Productos en el carrito:', response.data.productos);  // Log para depurar
+            })
+            .catch(error => {
+                console.error('Error al cargar el carrito:', error);
+            });
+        };
+
+        // Verificar el estado de la sesión al cargar el carrito
+        checkSession()
+            .then(response => {
+                console.log('Estado de la sesión:', response.data);
+                if (response.data.cart) {
+                    cargarCarrito(); // Si hay un carrito en la sesión, cargar los productos
+                }
+            })
+            .catch(error => {
+                console.error('Error al verificar la sesión:', error);
+            });
     }, []);
 
     const recalcularTotal = (productos) => {

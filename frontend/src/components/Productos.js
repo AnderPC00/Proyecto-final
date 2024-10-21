@@ -1,28 +1,52 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const Productos = ({ searchQuery }) => {
+const Productos = ({ searchQuery = '', resetSearch }) => {
     const [productos, setProductos] = useState([]);
+    const [productosFiltrados, setProductosFiltrados] = useState([]);
 
+    // Cargar todos los productos al montar el componente
     useEffect(() => {
         axios.get('http://localhost:5000/api/productos')
             .then(response => {
-                console.log(response.data);  // Verificar en la consola si llegan los productos
+                console.log('Productos recibidos del backend:', response.data);
                 setProductos(response.data);
+                setProductosFiltrados(response.data); // Inicialmente mostrar todos
             })
             .catch(error => {
                 console.error('Error al cargar los productos:', error);
             });
     }, []);
 
-    // Filtrar los productos en función de la búsqueda
-    const productosFiltrados = productos.filter(producto =>
-        producto.nombre.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    // Filtrar los productos según la búsqueda
+    useEffect(() => {
+        const normalizedSearchQuery = String(searchQuery).trim().toLowerCase();
+        if (normalizedSearchQuery) {
+            setProductosFiltrados(productos.filter(producto =>
+                producto.nombre.toLowerCase().includes(normalizedSearchQuery)
+            ));
+        } else {
+            setProductosFiltrados(productos); // Si no hay búsqueda, mostrar todos
+        }
+    }, [searchQuery, productos]);
+
+    // Reiniciar la búsqueda cuando se carga la página de productos
+    useEffect(() => {
+        if (resetSearch) {
+            resetSearch();  // Resetear la búsqueda cuando se carga la página
+        }
+    }, [resetSearch]);
+
+    // Función para restablecer todos los productos
+    const mostrarTodos = () => {
+        setProductosFiltrados(productos);
+        if (resetSearch) resetSearch(); // Limpiar la búsqueda en la barra si es necesario
+    };
 
     return (
         <div>
             <h1>Productos Disponibles</h1>
+            <button onClick={mostrarTodos}>Mostrar todos los productos</button> {/* Botón para mostrar todos */}
             {productosFiltrados.length > 0 ? (
                 <ul>
                     {productosFiltrados.map(producto => (
@@ -41,7 +65,7 @@ const Productos = ({ searchQuery }) => {
                     ))}
                 </ul>
             ) : (
-                <p>No se encontraron productos.</p>
+                <p>No se encontraron productos que coincidan con la búsqueda.</p>
             )}
         </div>
     );
@@ -53,9 +77,9 @@ const handleAddToCart = (productoId) => {
             'Content-Type': 'application/json',
             'Access-Control-Allow-Credentials': true,
         },
-        withCredentials: true  // Esto asegura que las cookies de sesión se envíen con la petición
+        withCredentials: true
     })
-    .then(response => {
+    .then(() => {
         alert('Producto añadido al carrito');
     })
     .catch(error => {
