@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, request, session
+from flask import Flask, render_template, redirect, url_for, request, session, flash, get_flashed_messages
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 import mysql.connector
@@ -18,18 +18,14 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
-    # Cargar el usuario desde la base de datos
     user = User(user_id)
 
     # Recuperar el carrito desde la base de datos al iniciar sesión
     if user.is_authenticated:
         cnx = get_db_connection()
         cursor = cnx.cursor(dictionary=True)
-
-        # Consultar los productos guardados en el carrito para este usuario
         cursor.execute('SELECT producto_id, cantidad FROM user_cart WHERE user_id = %s', (user_id,))
         productos_en_carrito = cursor.fetchall()
-
         cnx.close()
 
         # Sincronizar con el carrito en la sesión
@@ -58,10 +54,7 @@ def guardar_carrito_usuario(user_id, carrito):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Eliminar los productos actuales en el carrito del usuario
     cursor.execute('DELETE FROM user_cart WHERE user_id = %s', (user_id,))
-
-    # Insertar los productos actuales del carrito en la base de datos
     for producto_id, cantidad in carrito.items():
         cursor.execute(
             'INSERT INTO user_cart (user_id, producto_id, cantidad) VALUES (%s, %s, %s)',
@@ -71,15 +64,6 @@ def guardar_carrito_usuario(user_id, carrito):
     conn.commit()
     cursor.close()
     conn.close()
-
-def cargar_carrito_usuario(user_id):
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute('SELECT producto_id, cantidad FROM user_cart WHERE user_id = %s', (user_id,))
-    carrito = {str(item['producto_id']): item['cantidad'] for item in cursor.fetchall()}
-    cursor.close()
-    conn.close()
-    return carrito
 
 @app.route('/')
 def home():
@@ -98,29 +82,26 @@ def login():
 
         if user and check_password_hash(user['password'], password):
             login_user(User(user['id']))
-            
-            # Sincronización del carrito
-            cursor.execute('SELECT producto_id, cantidad FROM user_cart WHERE user_id = %s', (user['id'],))
-            productos_en_bd = cursor.fetchall()
-
-            # Actualizar el carrito de sesión con los productos de la base de datos
-            session['cart'] = {str(p['producto_id']): p['cantidad'] for p in productos_en_bd}
-
+            session['cart'] = cargar_carrito_usuario(user['id'])
+            flash('Sesión iniciada correctamente.', 'success')
             cnx.close()
             return redirect(url_for('profile'))
+
         cnx.close()
-        return 'Usuario o contraseña incorrectos'
+        flash('Usuario o contraseña incorrectos', 'danger')
+        return redirect(url_for('login'))
     return render_template('login.html')
 
 @app.route('/logout')
 @login_required
 def logout():
-    # Vaciar el carrito de la sesión al cerrar sesión
+    # Guardar el carrito actual del usuario en la base de datos
+    if 'cart' in session:
+        guardar_carrito_usuario(current_user.id, session['cart'])
+
     session.pop('cart', None)
-    
-    # Cerrar la sesión de usuario
     logout_user()
-    
+    flash('Has cerrado sesión.', 'info')
     return redirect(url_for('home'))
 
 @app.route('/profile')
@@ -140,10 +121,11 @@ def register():
         try:
             cursor.execute('INSERT INTO usuarios (username, password) VALUES (%s, %s)', (username, hashed_password))
             cnx.commit()
+            flash('Usuario registrado correctamente', 'success')
             return redirect(url_for('login'))
         except mysql.connector.Error as err:
             cnx.rollback()
-            return f"Error: {err}", 500
+            flash(f"Error: {err}", 'danger')
         finally:
             cursor.close()
             cnx.close()
@@ -161,7 +143,8 @@ def productos():
         cnx.close()
         return render_template('productos.html', productos=productos)
     except mysql.connector.Error as err:
-        return f"Error: {err}", 500
+        flash(f"Error: {err}", 'danger')
+        return redirect(url_for('home'))
 
 @app.route('/producto/<int:producto_id>')
 def obtener_producto(producto_id):
@@ -175,48 +158,55 @@ def obtener_producto(producto_id):
         if producto:
             return render_template('producto.html', producto=producto)
         else:
-            return "Producto no encontrado", 404
+            flash("Producto no encontrado", 'danger')
+            return redirect(url_for('productos'))
     except mysql.connector.Error as err:
-        return f"Error: {err}", 500
+        flash(f"Error: {err}", 'danger')
+        return redirect(url_for('productos'))
 
 @app.route('/add_to_cart/<int:producto_id>', methods=['POST'])
 def add_to_cart(producto_id):
     cantidad = request.form.get('cantidad', 1, type=int)
-    
+
     # Verifica si el carrito existe en la sesión
     if 'cart' not in session:
         session['cart'] = {}
 
     cart = session['cart']
-    
+
+    # Obtener el stock actual del producto
+    cnx = get_db_connection()
+    cursor = cnx.cursor(dictionary=True)
+    cursor.execute('SELECT stock FROM productos WHERE id = %s', (producto_id,))
+    producto = cursor.fetchone()
+
+    # Verifica la cantidad total del producto en el carrito
+    cantidad_total = cart.get(str(producto_id), 0) + cantidad
+
+    if cantidad_total > producto['stock']:
+        flash(f"No puedes añadir más de {producto['stock']} productos al carrito.", 'error')
+        cnx.close()
+        return redirect(url_for('productos'))
+
     # Actualiza la cantidad del producto en el carrito
-    if str(producto_id) in cart:
-        cart[str(producto_id)] += cantidad
-    else:
-        cart[str(producto_id)] = cantidad
+    cart[str(producto_id)] = cantidad_total
 
     # Si el usuario está autenticado, actualizamos la base de datos también
     if current_user.is_authenticated:
-        cnx = get_db_connection()
-        cursor = cnx.cursor()
-
-        # Comprueba si el producto ya está en el carrito de la base de datos
         cursor.execute('SELECT cantidad FROM user_cart WHERE user_id = %s AND producto_id = %s', (current_user.id, producto_id))
         result = cursor.fetchone()
 
         if result:
-            # Si ya existe, actualiza la cantidad
-            nueva_cantidad = result[0] + cantidad
+            nueva_cantidad = result['cantidad'] + cantidad
             cursor.execute('UPDATE user_cart SET cantidad = %s WHERE user_id = %s AND producto_id = %s', (nueva_cantidad, current_user.id, producto_id))
         else:
-            # Si no existe, añade una nueva entrada
             cursor.execute('INSERT INTO user_cart (user_id, producto_id, cantidad) VALUES (%s, %s, %s)', (current_user.id, producto_id, cantidad))
 
         cnx.commit()
-        cnx.close()
 
-    # Actualiza el carrito en la sesión
+    cnx.close()
     session['cart'] = cart
+    flash('Producto añadido al carrito con éxito.', 'success')
     return redirect(url_for('carrito'))
 
 @app.route('/carrito')
@@ -228,7 +218,6 @@ def carrito():
     productos_con_cantidades = []
     total = 0
 
-    # Conectar a la base de datos y obtener los productos
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
@@ -255,7 +244,6 @@ def remove_from_cart(producto_id):
         if str(producto_id) in cart:
             del cart[str(producto_id)]
 
-        # Si el usuario está autenticado, también eliminamos el producto de la base de datos
         if current_user.is_authenticated:
             cnx = get_db_connection()
             cursor = cnx.cursor()
@@ -264,6 +252,54 @@ def remove_from_cart(producto_id):
             cnx.close()
 
         session['cart'] = cart
+        flash('Producto eliminado del carrito', 'info')
+    return redirect(url_for('carrito'))
+
+def cargar_carrito_usuario(user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute('SELECT producto_id, cantidad FROM user_cart WHERE user_id = %s', (user_id,))
+    carrito = {str(item['producto_id']): item['cantidad'] for item in cursor.fetchall()}
+    cursor.close()
+    conn.close()
+    return carrito
+
+@app.route('/update_cart/<int:producto_id>', methods=['POST'])
+def update_cart(producto_id):
+    if 'cart' in session:
+        cart = session['cart']
+        nueva_cantidad = request.form.get('cantidad', type=int)
+
+        # Comprobamos si la cantidad es válida
+        cnx = get_db_connection()
+        cursor = cnx.cursor(dictionary=True)
+        cursor.execute('SELECT stock FROM productos WHERE id = %s', (producto_id,))
+        producto = cursor.fetchone()
+        cnx.close()
+
+        if producto:
+            # Validamos que la nueva cantidad no supere el stock
+            if nueva_cantidad <= producto['stock']:
+                cart[str(producto_id)] = nueva_cantidad
+                session['cart'] = cart  # Asegura que la sesión se actualiza
+
+                # Si el usuario está autenticado, también actualizamos en la base de datos
+                if current_user.is_authenticated:
+                    cnx = get_db_connection()
+                    cursor = cnx.cursor()
+                    cursor.execute(
+                        'UPDATE user_cart SET cantidad = %s WHERE user_id = %s AND producto_id = %s',
+                        (nueva_cantidad, current_user.id, producto_id)
+                    )
+                    cnx.commit()
+                    cnx.close()
+
+                flash('Cantidad actualizada correctamente.', 'success')
+            else:
+                flash(f'No puedes añadir más de {producto["stock"]} unidades al carrito.', 'error')
+        else:
+            flash('Producto no encontrado.', 'error')
+
     return redirect(url_for('carrito'))
 
 if __name__ == '__main__':
