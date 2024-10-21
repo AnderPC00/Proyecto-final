@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const Productos = () => {
+const Productos = ({ searchQuery }) => {
     const [productos, setProductos] = useState([]);
 
     useEffect(() => {
         axios.get('http://localhost:5000/api/productos')
             .then(response => {
-                console.log(response.data);  // Añadir esto para verificar en la consola si llegan los productos
+                console.log(response.data);  // Verificar en la consola si llegan los productos
                 setProductos(response.data);
             })
             .catch(error => {
@@ -15,12 +15,17 @@ const Productos = () => {
             });
     }, []);
 
+    // Filtrar los productos en función de la búsqueda
+    const productosFiltrados = productos.filter(producto =>
+        producto.nombre.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     return (
         <div>
             <h1>Productos Disponibles</h1>
-            {productos.length > 0 ? (
+            {productosFiltrados.length > 0 ? (
                 <ul>
-                    {productos.map(producto => (
+                    {productosFiltrados.map(producto => (
                         <li key={producto.id}>
                             <h2>{producto.nombre}</h2>
                             <p>Precio: €{producto.precio}</p>
@@ -36,7 +41,7 @@ const Productos = () => {
                     ))}
                 </ul>
             ) : (
-                <p>No hay productos disponibles.</p>
+                <p>No se encontraron productos.</p>
             )}
         </div>
     );

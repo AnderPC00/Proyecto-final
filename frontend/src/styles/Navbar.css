@@ -1,0 +1,43 @@
+/* Navbar.css */
+nav {
+    background-color: #333; /* Fondo oscuro */
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+nav a, nav span {
+    color: #ffffff; /* Texto blanco para mayor contraste */
+    text-decoration: none;
+    padding: 10px;
+    font-weight: bold;
+    transition: background-color 0.3s ease; /* Transición suave */
+}
+
+nav a:hover {
+    background-color: #fffb00; /* Color al pasar el cursor #cadf0c*/
+    color: #ffffff; /* Mantiene el color del texto blanco */
+}
+
+.nav-links {
+    display: flex;
+}
+
+button {
+    background-color: #f44336;
+    color: white;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s ease; /* Transición suave */
+}
+
+button:hover {
+    background-color: #d32f2f; /* Color al pasar el cursor */
+}
+
+span {
+    color: #ffffff; /* Texto blanco para el saludo */
+    margin-right: 10px;
+}
