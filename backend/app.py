@@ -18,7 +18,24 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User(user_id)
+    # Cargar el usuario desde la base de datos
+    user = User(user_id)
+
+    # Recuperar el carrito desde la base de datos al iniciar sesión
+    if user.is_authenticated:
+        cnx = get_db_connection()
+        cursor = cnx.cursor(dictionary=True)
+
+        # Consultar los productos guardados en el carrito para este usuario
+        cursor.execute('SELECT producto_id, cantidad FROM user_cart WHERE user_id = %s', (user_id,))
+        productos_en_carrito = cursor.fetchall()
+
+        cnx.close()
+
+        # Sincronizar con el carrito en la sesión
+        session['cart'] = {str(producto['producto_id']): producto['cantidad'] for producto in productos_en_carrito}
+
+    return user
 
 # Configuración de la conexión a la base de datos MySQL
 config = {
@@ -28,36 +45,45 @@ config = {
     'database': 'tienda_apc'
 }
 
+def get_db_connection():
+    connection = mysql.connector.connect(
+        host=config['host'],
+        user=config['user'],
+        password=config['password'],
+        database=config['database']
+    )
+    return connection
+
+def guardar_carrito_usuario(user_id, carrito):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Eliminar los productos actuales en el carrito del usuario
+    cursor.execute('DELETE FROM user_cart WHERE user_id = %s', (user_id,))
+
+    # Insertar los productos actuales del carrito en la base de datos
+    for producto_id, cantidad in carrito.items():
+        cursor.execute(
+            'INSERT INTO user_cart (user_id, producto_id, cantidad) VALUES (%s, %s, %s)',
+            (user_id, producto_id, cantidad)
+        )
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+def cargar_carrito_usuario(user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute('SELECT producto_id, cantidad FROM user_cart WHERE user_id = %s', (user_id,))
+    carrito = {str(item['producto_id']): item['cantidad'] for item in cursor.fetchall()}
+    cursor.close()
+    conn.close()
+    return carrito
+
 @app.route('/')
 def home():
-    # Inicializa las variables para manejar el carrito vacío
-    productos_con_cantidades = []
-    total = 0
-
-    if 'cart' in session and session['cart']:
-        cart = session['cart']
-
-        # Conectar a la base de datos y obtener los productos
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-
-        producto_ids = list(cart.keys())
-
-        if producto_ids:
-            cursor.execute('SELECT * FROM productos WHERE id IN (%s)' % ','.join(['%s'] * len(producto_ids)), producto_ids)
-            productos = cursor.fetchall()
-
-            for producto in productos:
-                producto_id = producto['id']
-                cantidad = cart.get(str(producto_id), 0)
-                subtotal = producto['precio'] * cantidad
-                total += subtotal
-                productos_con_cantidades.append({**producto, 'cantidad': cantidad, 'subtotal': subtotal})
-
-        conn.close()
-
-    return render_template('index.html', total=total, productos=productos_con_cantidades)
-
+    return render_template('index.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -65,27 +91,36 @@ def login():
         username = request.form['username']
         password = request.form['password']
 
-        # Conectar a la base de datos
-        cnx = mysql.connector.connect(**config)
-        cursor = cnx.cursor()
+        cnx = get_db_connection()
+        cursor = cnx.cursor(dictionary=True)
         cursor.execute('SELECT id, password FROM usuarios WHERE username = %s', (username,))
         user = cursor.fetchone()
-        cursor.close()
-        cnx.close()
 
-        if user and check_password_hash(user[1], password):
-            user_id = user[0]
-            login_user(User(user_id))
+        if user and check_password_hash(user['password'], password):
+            login_user(User(user['id']))
+            
+            # Sincronización del carrito
+            cursor.execute('SELECT producto_id, cantidad FROM user_cart WHERE user_id = %s', (user['id'],))
+            productos_en_bd = cursor.fetchall()
+
+            # Actualizar el carrito de sesión con los productos de la base de datos
+            session['cart'] = {str(p['producto_id']): p['cantidad'] for p in productos_en_bd}
+
+            cnx.close()
             return redirect(url_for('profile'))
-
-        return 'Login failed'
-
+        cnx.close()
+        return 'Usuario o contraseña incorrectos'
     return render_template('login.html')
 
 @app.route('/logout')
 @login_required
 def logout():
+    # Vaciar el carrito de la sesión al cerrar sesión
+    session.pop('cart', None)
+    
+    # Cerrar la sesión de usuario
     logout_user()
+    
     return redirect(url_for('home'))
 
 @app.route('/profile')
@@ -100,7 +135,7 @@ def register():
         password = request.form['password']
         hashed_password = generate_password_hash(password)
 
-        cnx = mysql.connector.connect(**config)
+        cnx = get_db_connection()
         cursor = cnx.cursor()
         try:
             cursor.execute('INSERT INTO usuarios (username, password) VALUES (%s, %s)', (username, hashed_password))
@@ -118,7 +153,7 @@ def register():
 @app.route('/productos')
 def productos():
     try:
-        cnx = mysql.connector.connect(**config)
+        cnx = get_db_connection()
         cursor = cnx.cursor(dictionary=True)
         cursor.execute('SELECT * FROM productos')
         productos = cursor.fetchall()
@@ -131,7 +166,7 @@ def productos():
 @app.route('/producto/<int:producto_id>')
 def obtener_producto(producto_id):
     try:
-        cnx = mysql.connector.connect(**config)
+        cnx = get_db_connection()
         cursor = cnx.cursor(dictionary=True)
         cursor.execute('SELECT * FROM productos WHERE id = %s', (producto_id,))
         producto = cursor.fetchone()
@@ -146,71 +181,90 @@ def obtener_producto(producto_id):
 
 @app.route('/add_to_cart/<int:producto_id>', methods=['POST'])
 def add_to_cart(producto_id):
+    cantidad = request.form.get('cantidad', 1, type=int)
+    
+    # Verifica si el carrito existe en la sesión
     if 'cart' not in session:
         session['cart'] = {}
 
-    cantidad = request.form.get('cantidad', 1, type=int)
-    producto_id_str = str(producto_id)  # Convertir a cadena
-    if producto_id_str in session['cart']:
-        session['cart'][producto_id_str] += cantidad
+    cart = session['cart']
+    
+    # Actualiza la cantidad del producto en el carrito
+    if str(producto_id) in cart:
+        cart[str(producto_id)] += cantidad
     else:
-        session['cart'][producto_id_str] = cantidad
+        cart[str(producto_id)] = cantidad
 
-    session.modified = True  # Asegúrate de que la sesión se modifique
-    print(f"Producto con ID: {producto_id_str} añadido al carrito con cantidad: {session['cart'][producto_id_str]}")
+    # Si el usuario está autenticado, actualizamos la base de datos también
+    if current_user.is_authenticated:
+        cnx = get_db_connection()
+        cursor = cnx.cursor()
+
+        # Comprueba si el producto ya está en el carrito de la base de datos
+        cursor.execute('SELECT cantidad FROM user_cart WHERE user_id = %s AND producto_id = %s', (current_user.id, producto_id))
+        result = cursor.fetchone()
+
+        if result:
+            # Si ya existe, actualiza la cantidad
+            nueva_cantidad = result[0] + cantidad
+            cursor.execute('UPDATE user_cart SET cantidad = %s WHERE user_id = %s AND producto_id = %s', (nueva_cantidad, current_user.id, producto_id))
+        else:
+            # Si no existe, añade una nueva entrada
+            cursor.execute('INSERT INTO user_cart (user_id, producto_id, cantidad) VALUES (%s, %s, %s)', (current_user.id, producto_id, cantidad))
+
+        cnx.commit()
+        cnx.close()
+
+    # Actualiza el carrito en la sesión
+    session['cart'] = cart
     return redirect(url_for('carrito'))
 
 @app.route('/carrito')
 def carrito():
-    # Inicializa las variables para manejar el carrito vacío
+    if 'cart' not in session:
+        session['cart'] = {}
+
+    cart = session['cart']
     productos_con_cantidades = []
     total = 0
 
-    if 'cart' not in session or not session['cart']:
-        session['cart'] = {}
-    else:
-        cart = session['cart']
+    # Conectar a la base de datos y obtener los productos
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
 
-        # Conectar a la base de datos y obtener los productos
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
+    producto_ids = list(cart.keys())
+    if producto_ids:
+        cursor.execute('SELECT * FROM productos WHERE id IN (%s)' % ','.join(['%s'] * len(producto_ids)), producto_ids)
+        productos = cursor.fetchall()
 
-        producto_ids = list(cart.keys())
+        for producto in productos:
+            producto_id = producto['id']
+            cantidad = cart.get(str(producto_id), 0)
+            total += producto['precio'] * cantidad
+            productos_con_cantidades.append({**producto, 'cantidad': cantidad})
 
-        if producto_ids:
-            cursor.execute('SELECT * FROM productos WHERE id IN (%s)' % ','.join(['%s'] * len(producto_ids)), producto_ids)
-            productos = cursor.fetchall()
-
-            for producto in productos:
-                producto_id = producto['id']
-                cantidad = cart.get(str(producto_id), 0)
-                subtotal = producto['precio'] * cantidad
-                total += subtotal
-                productos_con_cantidades.append({**producto, 'cantidad': cantidad, 'subtotal': subtotal})
-
-        conn.close()
+    conn.close()
 
     return render_template('carrito.html', productos=productos_con_cantidades, total=total)
 
 @app.route('/remove_from_cart/<int:producto_id>', methods=['POST'])
 def remove_from_cart(producto_id):
-    print(f"Intentando eliminar el producto con ID: {producto_id}")
-    if 'cart' in session and str(producto_id) in session['cart']:
-        del session['cart'][str(producto_id)]
-        session.modified = True
-        print(f"Producto con ID: {producto_id} eliminado del carrito.")
-    else:
-        print(f"Producto con ID: {producto_id} no encontrado en el carrito.")
-    return redirect(url_for('carrito'))
+    if 'cart' in session:
+        cart = session['cart']
 
-def get_db_connection():
-    connection = mysql.connector.connect(
-        host='127.0.0.1',
-        user='root',
-        password='2163',
-        database='tienda_apc'
-    )
-    return connection
+        if str(producto_id) in cart:
+            del cart[str(producto_id)]
+
+        # Si el usuario está autenticado, también eliminamos el producto de la base de datos
+        if current_user.is_authenticated:
+            cnx = get_db_connection()
+            cursor = cnx.cursor()
+            cursor.execute('DELETE FROM user_cart WHERE user_id = %s AND producto_id = %s', (current_user.id, producto_id))
+            cnx.commit()
+            cnx.close()
+
+        session['cart'] = cart
+    return redirect(url_for('carrito'))
 
 if __name__ == '__main__':
     app.run(debug=True)

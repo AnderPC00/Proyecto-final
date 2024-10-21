@@ -1,32 +1,35 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carrito</title>
-</head>
-<body>
-    <h1>Carrito</h1>
-    
-    <!-- Botón para volver atrás -->
-    <a href="{{ url_for('productos') }}">Volver a productos</a>
+{% extends "base.html" %}
 
-    {% if productos %}
+{% block content %}
+<h1>Carrito de compras</h1>
+
+{% if productos %}
+    <ul>
         {% for producto in productos %}
-            <div>
-                <h2>{{ producto.nombre }}</h2>
-                <p>Precio por unidad: €{{ producto.precio }}</p>
-                <p>Cantidad: {{ producto.cantidad }}</p>
-                <p>Subtotal: €{{ producto.subtotal }}</p>
-                <form action="{{ url_for('remove_from_cart', producto_id=producto.id) }}" method="post">
-                    <button type="submit">Eliminar</button>
-                </form>
-            </div>
+        <li>
+            <h2>{{ producto.nombre }}</h2>
+            <p>Precio: €{{ producto.precio }}</p>
+            <p>Cantidad: {{ producto.cantidad }}</p>
+            {% if producto.stock == 0 %}
+                <p style="color: red;">Sin stock</p>
+            {% endif %}
+            <form action="{{ url_for('remove_from_cart', producto_id=producto.id) }}" method="post">
+                <button type="submit">Eliminar</button>
+            </form>
+        </li>
         {% endfor %}
-        <hr>
-        <p>Total: €{{ total }}</p>
-    {% else %}
-        <p>El carrito está vacío.</p>
-    {% endif %}
-</body>
-</html>
+    </ul>
+
+    <h3>Total: €{{ total }}</h3>
+
+    <form action="/checkout" method="post">
+        <button type="submit" {% if hay_productos_sin_stock %}disabled{% endif %}>Proceder al pago</button>
+    </form>
+    
+{% else %}
+    <p>El carrito está vacío.</p>
+{% endif %}
+
+<a href="{{ url_for('home') }}">Volver a inicio</a>
+<a href="{{ url_for('productos') }}">Seguir comprando</a>
+{% endblock %}

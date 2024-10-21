@@ -1,26 +1,9 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tienda de Productos APC</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-</head>
-<body>
-    <header>
-        <h1>Bienvenido a la Tienda de Productos APC</h1>
-        <nav>
-            <a href="{{ url_for('home') }}">Inicio</a>
-            <a href="{{ url_for('productos') }}">Productos</a>
-            <a href="{{ url_for('carrito') }}">Carrito ({{ total }} €)</a>
-        </nav>
-    </header>
-    <main>
-        <h2>Últimos Productos</h2>
-        <!-- Aquí puedes añadir contenido específico de la página principal -->
-    </main>
-    <footer>
-        <p>&copy; 2024 Tienda de Productos APC</p>
-    </footer>
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block content %}
+    <section>
+        <h2>Bienvenido a la Tienda de Productos APC</h2>
+        <p>Explora nuestra amplia variedad de productos.</p>
+        <a href="{{ url_for('productos') }}" class="btn btn-primary">Ver Productos</a>
+    </section>
+{% endblock %}

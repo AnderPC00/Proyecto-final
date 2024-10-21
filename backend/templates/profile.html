@@ -1,11 +1,6 @@
-<!doctype html>
-<html>
-<head>
-    <title>Perfil</title>
-</head>
-<body>
-    <h1>Perfil de Usuario</h1>
-    <p>ID de Usuario: {{ user_id }}</p>
-    <a href="{{ url_for('logout') }}">Cerrar sesión</a>
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>Perfil de {{ current_user.username }}</h2>
+    <p>Bienvenido, {{ current_user.username }}.</p>
+{% endblock %}
