@@ -9,8 +9,12 @@ const Register = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
-    axios.post('http://localhost:5000/register', { username, password })
+  
+    const formData = new URLSearchParams();
+    formData.append('username', username);
+    formData.append('password', password);
+  
+    axios.post('http://localhost:5000/register', formData)
       .then(response => {
         // Si el registro es exitoso
         navigate('/login');  // Redirigir a la página de inicio de sesión
