@@ -232,7 +232,7 @@ def add_to_cart(producto_id):
     
     cart[str(producto_id)] = cantidad_total
     
-    # Si el usuario está autenticado, guardamos el carrito en la base de datos
+    # Si el usuario está autenticado, guarda el carrito en la base de datos
     if current_user.is_authenticated:
         cursor.execute('SELECT cantidad FROM user_cart WHERE user_id = %s AND producto_id = %s', (current_user.id, producto_id))
         result = cursor.fetchone()
@@ -273,7 +273,7 @@ def api_add_to_cart(producto_id):
         session['cart'] = cart
         session.modified = True
 
-        # Si el usuario está autenticado, guardamos el carrito en la base de datos
+        # Si el usuario está autenticado, guarda el carrito en la base de datos
         if current_user.is_authenticated:
             guardar_carrito_usuario(current_user.id, session['cart'])
 
@@ -382,7 +382,7 @@ def update_cart(producto_id):
         cart = session['cart']
         nueva_cantidad = request.form.get('cantidad', type=int)
 
-        # Comprobamos si la cantidad es válida
+        # Comprueba si la cantidad es válida
         cnx = get_db_connection()
         cursor = cnx.cursor(dictionary=True)
         cursor.execute('SELECT stock FROM productos WHERE id = %s', (producto_id,))
@@ -390,13 +390,13 @@ def update_cart(producto_id):
         cnx.close()
 
         if producto:
-            # Validamos que la nueva cantidad no supere el stock
+            # Valida que la nueva cantidad no supere el stock
             if nueva_cantidad <= producto['stock']:
                 print(f'Actualizando producto {producto_id} a {nueva_cantidad} unidades')
                 cart[str(producto_id)] = nueva_cantidad
                 session['cart'] = cart  # Asegura que la sesión se actualiza
 
-                # Si el usuario está autenticado, también actualizamos en la base de datos
+                # Si el usuario está autenticado, también se actualiz en la base de datos
                 if current_user.is_authenticated:
                     cnx = get_db_connection()
                     cursor = cnx.cursor()
@@ -417,7 +417,7 @@ def update_cart(producto_id):
 
 @app.route('/api/update_cart/<int:producto_id>', methods=['POST'])
 def api_update_cart(producto_id):
-    data = request.get_json()  # Asegúrate de que se está recibiendo JSON
+    data = request.get_json()  # Asegurarse de que se está recibiendo JSON
     nueva_cantidad = data.get('cantidad')
 
     if nueva_cantidad is None or nueva_cantidad < 1:
@@ -484,6 +484,15 @@ def checkout():
 
 @app.route('/api/checkout', methods=['POST'])
 def api_checkout():
+    data = request.get_json()
+    direccion = data.get('direccion')
+    telefono = data.get('telefono')  # Nuevo campo de teléfono
+    metodo_pago = data.get('metodo_pago')
+
+    if not direccion or not telefono or not metodo_pago:
+        return jsonify({'error': 'Falta información de dirección, teléfono o método de pago'}), 400
+
+    # Obtener carrito de la sesión
     if 'cart' not in session or not session['cart']:
         return jsonify({'message': 'El carrito está vacío'}), 400
 
@@ -498,11 +507,23 @@ def api_checkout():
         producto = cursor.fetchone()
         if producto:
             if producto['stock'] < cantidad:
+                cnx.close()
                 return jsonify({'message': f"No hay suficiente stock para {producto['nombre']}."}), 400
             total += producto['precio'] * cantidad
             # Reducir el stock
             cursor.execute('UPDATE productos SET stock = stock - %s WHERE id = %s', (cantidad, producto_id))
 
+    # Si el usuario está autenticado, guardar el pedido y los detalles
+    if current_user.is_authenticated:
+        cursor.execute('INSERT INTO pedidos (user_id, total, direccion, telefono, metodo_pago) VALUES (%s, %s, %s, %s, %s)', 
+                       (current_user.id, total, direccion, telefono, metodo_pago))
+        pedido_id = cursor.lastrowid
+
+        # Guardar detalles del pedido
+        for producto_id, cantidad in cart.items():
+            cursor.execute('INSERT INTO detalles_pedido (pedido_id, producto_id, cantidad) VALUES (%s, %s, %s)', 
+                           (pedido_id, producto_id, cantidad))
+    
     cnx.commit()
     cnx.close()
 
@@ -550,6 +571,62 @@ def buscar_productos():
     
     return jsonify(productos)
 
+@app.route('/api/guardar_direccion', methods=['POST'])
+@login_required
+def guardar_direccion():
+    data = request.get_json()
+    direccion = data.get('direccion')
+    ciudad = data.get('ciudad')
+    provincia = data.get('provincia')
+    codigo_postal = data.get('codigo_postal')
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        'INSERT INTO direcciones (user_id, direccion, ciudad, provincia, codigo_postal) VALUES (%s, %s, %s, %s, %s)',
+        (current_user.id, direccion, ciudad, provincia, codigo_postal)
+    )
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({'message': 'Dirección guardada con éxito'})
+
+@app.route('/api/obtener_direcciones', methods=['GET'])
+def obtener_direcciones():
+    user_id = current_user.id if current_user.is_authenticated else None
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    if user_id:
+        # Si el usuario está autenticado, buscar direcciones asociadas a su ID
+        cursor.execute('SELECT direccion, ciudad, provincia, codigo_postal, pais, telefono FROM direcciones WHERE user_id = %s', (user_id,))
+    else:
+        # Si no está autenticado, devolvemos una lista vacía de direcciones
+        return jsonify([]), 200
+
+    direcciones = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    return jsonify(direcciones), 200
+
+@app.route('/api/procesar_pago', methods=['POST'])
+@login_required
+def procesar_pago():
+    data = request.get_json()
+    metodo_pago = data.get('metodo_pago')
+    direccion_id = data.get('direccion_id')
+    total = data.get('total')
+
+    # Aquí procesar el pago real, por ejemplo, con PayPal o Apple Pay
+
+    # Simulación del proceso de pago
+    if metodo_pago not in ['Apple Pay', 'PayPal', 'Tarjeta de Crédito']:
+        return jsonify({'error': 'Método de pago no válido'}), 400
+
+    return jsonify({'message': 'Pago procesado con éxito'})
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { checkSession } from '../api';
+import { useNavigate } from 'react-router-dom';  // Importar useNavigate para redirigir al checkout
 
 const Carrito = () => {
     const [productos, setProductos] = useState([]);
     const [total, setTotal] = useState(0);
+    const navigate = useNavigate();  // Definir el hook para navegación
 
     useEffect(() => {
         const cargarCarrito = () => {
@@ -79,17 +81,8 @@ const Carrito = () => {
     };
 
     const handleCheckout = () => {
-        console.log('Procesando pago...');  // Log para depurar
-        axios.post('http://localhost:5000/api/checkout', {}, { withCredentials: true })
-        .then(response => {
-            alert('Pago realizado con éxito');
-            setProductos([]);
-            setTotal(0);
-            console.log('Pago exitoso, carrito vaciado');  // Log para depurar
-        })
-        .catch(error => {
-            console.error('Error al proceder al pago:', error);
-        });
+        // En vez de procesar el pago aquí, redirigir al usuario a la página de checkout
+        navigate('/checkout');  // Redirigir a la página de checkout
     };
 
     return (
@@ -110,7 +103,7 @@ const Carrito = () => {
                         ))}
                     </ul>
                     <h3>Total: €{total.toFixed(2)}</h3>
-                    <button onClick={handleCheckout}>Proceder al pago</button>
+                    <button onClick={handleCheckout}>Proceder al pago</button> {/* Redirige al checkout */}
                 </div>
             ) : (
                 <p>El carrito está vacío.</p>

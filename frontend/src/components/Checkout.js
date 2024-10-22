@@ -1,0 +1,127 @@
+import React, { useState, useEffect, useContext } from 'react';
+import axios from 'axios';
+import { AuthContext } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';  // Importar useNavigate
+
+const Checkout = () => {
+    const { usuario } = useContext(AuthContext);
+    const [direcciones, setDirecciones] = useState([]);
+    const [direccionSeleccionada, setDireccionSeleccionada] = useState('');
+    const [nuevaDireccion, setNuevaDireccion] = useState({
+        direccion: '',
+        ciudad: '',
+        provincia: '',
+        codigo_postal: '',
+        pais: '',
+        telefono: ''
+    });
+    const [metodoPago, setMetodoPago] = useState('');
+    const navigate = useNavigate();  // Definir navigate
+
+    useEffect(() => {
+        if (usuario) {
+            axios.get('http://localhost:5000/api/obtener_direcciones', { withCredentials: true })
+                .then(response => {
+                    setDirecciones(response.data);
+                    console.log('Direcciones cargadas:', response.data);
+                })
+                .catch(error => {
+                    console.error('Error al cargar las direcciones:', error);
+                });
+        }
+    }, [usuario]);
+
+    const handleCheckout = () => {
+        const direccionFinal = direccionSeleccionada || nuevaDireccion;
+
+        const payload = {
+            direccion: direccionFinal,
+            telefono: nuevaDireccion.telefono,
+            metodo_pago: metodoPago
+        };
+
+        axios.post('http://localhost:5000/api/checkout', payload, { withCredentials: true })
+            .then(response => {
+                alert('Pago realizado con éxito');
+                console.log('Pago exitoso', response.data);
+                navigate('/');  // Redirigir al inicio tras el pago exitoso
+            })
+            .catch(error => {
+                console.error('Error al proceder al pago:', error);
+            });
+    };
+
+    return (
+        <div>
+            <h1>Proceso de Pago</h1>
+
+            {usuario && direcciones.length > 0 && (
+                <div>
+                    <h2>Dirección Guardada</h2>
+                    <select value={direccionSeleccionada} onChange={(e) => setDireccionSeleccionada(e.target.value)}>
+                        <option value="">Seleccionar una dirección</option>
+                        {direcciones.map((direccion) => (
+                            <option key={direccion.id} value={direccion.direccion}>
+                                {`${direccion.direccion}, ${direccion.ciudad}, ${direccion.provincia}, ${direccion.codigo_postal}, ${direccion.pais}`}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            )}
+
+            <div>
+                <h2>Nueva Dirección</h2>
+                <input
+                    type="text"
+                    placeholder="Dirección"
+                    value={nuevaDireccion.direccion}
+                    onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, direccion: e.target.value })}
+                />
+                <input
+                    type="text"
+                    placeholder="Ciudad"
+                    value={nuevaDireccion.ciudad}
+                    onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, ciudad: e.target.value })}
+                />
+                <input
+                    type="text"
+                    placeholder="Provincia"
+                    value={nuevaDireccion.provincia}
+                    onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, provincia: e.target.value })}
+                />
+                <input
+                    type="text"
+                    placeholder="Código Postal"
+                    value={nuevaDireccion.codigo_postal}
+                    onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, codigo_postal: e.target.value })}
+                />
+                <input
+                    type="text"
+                    placeholder="País"
+                    value={nuevaDireccion.pais}
+                    onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, pais: e.target.value })}
+                />
+                <input
+                    type="text"
+                    placeholder="Teléfono"
+                    value={nuevaDireccion.telefono}
+                    onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, telefono: e.target.value })}
+                />
+            </div>
+
+            <div>
+                <h2>Método de Pago</h2>
+                <select value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)}>
+                    <option value="">Seleccionar método de pago</option>
+                    <option value="tarjeta">Tarjeta de Crédito</option>
+                    <option value="paypal">PayPal</option>
+                    <option value="applepay">Apple Pay</option>
+                </select>
+            </div>
+
+            <button onClick={handleCheckout}>Confirmar Compra</button>
+        </div>
+    );
+};
+
+export default Checkout;
