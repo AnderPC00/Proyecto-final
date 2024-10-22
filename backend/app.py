@@ -808,18 +808,32 @@ def historial_pedidos():
 
     return jsonify(pedidos)
 
-@app.route('/api/producto/<int:id>', methods=['GET'])
-def obtener_producto(id):
+@app.route('/api/producto', methods=['GET'])
+def obtener_producto():
+    nombre = request.args.get('nombre')
+
+    if not nombre:
+        return jsonify({'error': 'Nombre del producto no proporcionado'}), 400
+
     cnx = get_db_connection()
     cursor = cnx.cursor(dictionary=True)
-    cursor.execute('SELECT * FROM productos WHERE id = %s', (id,))
-    producto = cursor.fetchone()
-    cnx.close()
 
-    if producto:
-        return jsonify(producto)
-    else:
+    # Buscar el producto basado en el nombre
+    cursor.execute('SELECT * FROM productos WHERE nombre = %s', (nombre,))
+    producto = cursor.fetchone()
+
+    if not producto:
+        cnx.close()
         return jsonify({'error': 'Producto no encontrado'}), 404
+
+    # Obtener las variantes del producto (color, capacidad, etc.)
+    cursor.execute('SELECT * FROM producto_variantes WHERE producto_id = %s', (producto['id'],))
+    variantes = cursor.fetchall()
+
+    producto['variantes'] = variantes
+
+    cnx.close()
+    return jsonify(producto)
 
 if __name__ == '__main__':
     app.run(debug=True)

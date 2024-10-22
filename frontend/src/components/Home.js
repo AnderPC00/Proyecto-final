@@ -41,7 +41,8 @@ function Home() {
                 )}
                 <h3>{producto.nombre}</h3>
                 <p>Precio: €{producto.precio}</p>
-                <Link to={`/producto/${producto.id}`}>
+                {/* Redirigir a la página de productos pero pasando el nombre como filtro en la URL */}
+                <Link to={`/productos?nombre=${producto.nombre}`}>
                   <button className="btn btn-primary">Ver Producto</button>
                 </Link>
               </div>

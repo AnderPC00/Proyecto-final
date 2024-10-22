@@ -1,18 +1,24 @@
 import React, { useState, useContext } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // Importa useNavigate para redirigir
 import { AuthContext } from '../context/AuthContext';
 import '../styles/Navbar.scss';
 
 const Navbar = ({ onSearch }) => {
   const { usuario, logout, carritoCount } = useContext(AuthContext);
   const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate(); // Hook para navegar programáticamente
 
   const handleSearch = (e) => {
     e.preventDefault();
+
+    // Si se proporciona la función onSearch, ejecutarla
     if (typeof onSearch === 'function') {
       onSearch(searchQuery);
-    } else {
-      console.error('onSearch no está definida como función');
+    }
+
+    // Redirigir a la página de productos con el término de búsqueda en la URL
+    if (searchQuery.trim() !== '') {
+      navigate(`/productos?nombre=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
 
@@ -62,33 +68,33 @@ const Navbar = ({ onSearch }) => {
               <i className="fas fa-search"></i>
             </button>
           </form>
-            <ul className="navbar-nav ms-auto align-items-center">
-                {usuario ? (
-                    <>
-                        <li className="nav-item">
-                            <span className="navbar-text bienvenido-text">Bienvenido</span>
-                        </li>
-                        <li className="nav-item">
-                            <button className="btn btn-danger ms-3" onClick={logout}>
-                                <i className="fas fa-sign-out-alt"></i> Cerrar sesión
-                            </button>
-                        </li>
-                    </>
-                ) : (
-                    <>
-                        <li className="nav-item">
-                            <Link className="nav-link" to="/login">
-                                <i className="fas fa-sign-in-alt"></i> Iniciar sesión
-                            </Link>
-                        </li>
-                        <li className="nav-item">
-                            <Link className="nav-link" to="/register">
-                                <i className="fas fa-user-plus"></i> Registrarse
-                            </Link>
-                        </li>
-                    </>
-                )}
-            </ul>
+          <ul className="navbar-nav ms-auto align-items-center">
+            {usuario ? (
+              <>
+                <li className="nav-item">
+                  <span className="navbar-text bienvenido-text">Bienvenido</span>
+                </li>
+                <li className="nav-item">
+                  <button className="btn btn-danger ms-3" onClick={logout}>
+                    <i className="fas fa-sign-out-alt"></i> Cerrar sesión
+                  </button>
+                </li>
+              </>
+            ) : (
+              <>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/login">
+                    <i className="fas fa-sign-in-alt"></i> Iniciar sesión
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/register">
+                    <i className="fas fa-user-plus"></i> Registrarse
+                  </Link>
+                </li>
+              </>
+            )}
+          </ul>
         </div>
       </div>
     </nav>

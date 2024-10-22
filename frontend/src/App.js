@@ -9,7 +9,6 @@ import Profile from './components/Profile';
 import Checkout from './components/Checkout';
 import Home from './components/Home';
 import { AuthProvider } from './context/AuthContext';
-import ProductoDetalle from './components/ProductoDetalle';
 import './styles/responsive.scss';
 import './styles/App.scss';
 
@@ -20,7 +19,6 @@ function App() {
     setSearchQuery(query);
   };
 
-   // Restablecer la búsqueda cuando se accede a la página de productos
   const resetSearch = () => {
     setSearchQuery('');
   };
@@ -30,7 +28,7 @@ function App() {
       <Router>
         <Navbar onSearch={handleSearch} />
         <Routes>
-          <Route path="/" element={<Home />} /> {/* Usar Home.js como página principal */}
+          <Route path="/" element={<Home />} />
           <Route 
             path="/productos" 
             element={<Productos searchQuery={searchQuery} onResetSearch={resetSearch} />} 
@@ -40,7 +38,6 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/checkout" element={<Checkout />} />
-          <Route path="/producto/:id" element={<ProductoDetalle />} /> {/* Ruta para el detalle del producto */}
         </Routes>
       </Router>
     </AuthProvider>

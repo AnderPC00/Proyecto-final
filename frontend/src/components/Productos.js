@@ -9,7 +9,7 @@ import { useLocation } from 'react-router-dom';
 const Productos = () => {
     const location = useLocation();
     const searchParams = new URLSearchParams(location.search);
-    const searchQuery = searchParams.get('search') || ''; // Obtener el valor de 'search' de la URL
+    const searchQuery = searchParams.get('nombre') || ''; // Obtener el valor de 'nombre' de la URL para filtrar por nombre del producto
 
     const [productos, setProductos] = useState([]);
     const [productosFiltrados, setProductosFiltrados] = useState([]);
@@ -23,14 +23,14 @@ const Productos = () => {
         axios.get('http://localhost:5000/api/productos')
             .then(response => {
                 setProductos(response.data);
-                setProductosFiltrados(response.data);
+                setProductosFiltrados(response.data); // Mostrar todos los productos por defecto
             })
             .catch(error => {
                 showErrorMessage('Error al cargar los productos');
             });
     }, []);
 
-    // Filtrar los productos según la búsqueda
+    // Filtrar los productos según la búsqueda o el nombre del producto en la query string
     useEffect(() => {
         if (searchQuery) {
             const productosFiltrados = productos.filter(producto =>
@@ -38,7 +38,7 @@ const Productos = () => {
             );
             setProductosFiltrados(productosFiltrados);
         } else {
-            setProductosFiltrados(productos);
+            setProductosFiltrados(productos); // Mostrar todos si no hay filtro de búsqueda
         }
     }, [searchQuery, productos]);
 
@@ -144,10 +144,8 @@ const Productos = () => {
                         const colores = producto.variantes ? [...new Set(producto.variantes.map(v => v.split('-')[0]))] : [];
                         const capacidades = producto.variantes ? [...new Set(producto.variantes.map(v => v.split('-')[1]))] : [];
 
-                        // Mostrar solo la primera imagen
                         const primeraImagen = imagenes.length > 0 ? imagenes[0] : '';
 
-                        // Clase de estilo condicional según el stock
                         const stockClase = stock[producto.id] > 0 ? 'stock-disponible' : 'sin-stock';
 
                         return (
@@ -160,14 +158,12 @@ const Productos = () => {
                                 <h2>{producto.nombre}</h2>
                                 <p>Precio: €{producto.precio}</p>
                                 
-                                {/* Mostrar el stock con estilo condicional */}
                                 <p className={stockClase}>
                                     Stock disponible: {stock[producto.id] !== undefined ? stock[producto.id] : 'Selecciona color y capacidad'}
                                 </p>
 
                                 {colores.length > 0 && capacidades.length > 0 ? (
                                     <>
-                                        {/* Selector de color */}
                                         <label>Color:</label>
                                         <select value={selectedColor[producto.id] || ''} onChange={(e) => handleColorChange(producto.id, e.target.value)}>
                                             <option value="">Seleccionar Color</option>
@@ -176,7 +172,6 @@ const Productos = () => {
                                             ))}
                                         </select>
 
-                                        {/* Selector de capacidad */}
                                         <label>Capacidad:</label>
                                         <select value={selectedCapacidad[producto.id] || ''} onChange={(e) => handleCapacidadChange(producto.id, e.target.value)}>
                                             <option value="">Seleccionar Capacidad</option>
