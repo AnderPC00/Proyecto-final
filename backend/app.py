@@ -136,7 +136,17 @@ def profile():
 
 @app.route('/api/check_session', methods=['GET'])
 def api_check_session():
-    return jsonify(session)
+    if current_user.is_authenticated:
+        return jsonify({
+            'usuario': {
+                'id': current_user.id,
+                'nombre': current_user.nombre if hasattr(current_user, 'nombre') else 'Usuario',
+                'email': current_user.email if hasattr(current_user, 'email') else 'Sin email',
+                'rol': current_user.rol if hasattr(current_user, 'rol') else 'usuario'
+            }
+        }), 200
+    else:
+        return jsonify({'usuario': None}), 200
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
