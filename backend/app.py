@@ -243,13 +243,17 @@ def api_productos():
     try:
         cnx = get_db_connection()
         cursor = cnx.cursor(dictionary=True)
-        # Modificar la consulta SQL para devolver la URL completa de la imagen
-        cursor.execute('''
+        cursor.execute("""
             SELECT p.id, p.nombre, p.precio, p.stock, 
-            CONCAT('http://localhost:5000/static/images/', pi.imagen) AS imagen 
-            FROM productos p 
+                GROUP_CONCAT(pi.imagen SEPARATOR ',') AS imagenes,
+                GROUP_CONCAT(DISTINCT pv.color SEPARATOR ',') AS colores,
+                GROUP_CONCAT(DISTINCT pv.capacidad SEPARATOR ',') AS capacidades
+            FROM productos p
             LEFT JOIN producto_imagenes pi ON p.id = pi.producto_id
-        ''')
+            LEFT JOIN producto_variantes pv ON p.id = pv.producto_id
+            GROUP BY p.id
+        """)
+
         productos = cursor.fetchall()
         cursor.close()
         cnx.close()
@@ -307,35 +311,36 @@ def add_to_cart(producto_id):
 def api_add_to_cart(producto_id):
     data = request.get_json()
     cantidad = data.get('cantidad', 1)
+    color = data.get('color')
+    capacidad = data.get('capacidad')
+
+    if not color or not capacidad:
+        return jsonify({'error': 'Debes seleccionar color y capacidad'}), 400
+
     if 'cart' not in session:
         session['cart'] = {}
+
     cart = session['cart']
-    
-    # Verificar stock en la base de datos
-    cnx = get_db_connection()
-    cursor = cnx.cursor(dictionary=True)
-    cursor.execute('SELECT stock FROM productos WHERE id = %s', (producto_id,))
-    producto = cursor.fetchone()
-    
-    if producto:
-        cantidad_total = cart.get(str(producto_id), 0) + cantidad
-        if cantidad_total > producto['stock']:
-            cnx.close()
-            return jsonify({"message": "No puedes añadir más productos de los que hay en stock"}), 400
+    cart_key = f"{producto_id}-{color}-{capacidad}"
 
-        cart[str(producto_id)] = cantidad_total
-        session['cart'] = cart
-        session.modified = True
+    print(f"Recibido: Producto ID={producto_id}, Color={color}, Capacidad={capacidad}, Cantidad={cantidad}")
+    print(f"Cart actual: {cart}")
 
-        # Si el usuario está autenticado, guarda el carrito en la base de datos
-        if current_user.is_authenticated:
-            guardar_carrito_usuario(current_user.id, session['cart'])
-
-        cnx.close()
-        return jsonify({"message": "Producto añadido al carrito con éxito"}), 200
+    # Si el producto ya está en el carrito con la misma variante, actualiza la cantidad
+    if cart_key in cart:
+        print(f"Actualizando cantidad de {cart_key}. Cantidad anterior: {cart[cart_key]['cantidad']}")
+        cart[cart_key]['cantidad'] += cantidad
     else:
-        cnx.close()
-        return jsonify({"message": "Producto no encontrado"}), 404
+        # Si no existe, añade el producto con la variante
+        print(f"Añadiendo nuevo producto: {cart_key}")
+        cart[cart_key] = {'cantidad': cantidad, 'color': color, 'capacidad': capacidad}
+
+    session['cart'] = cart
+    session.modified = True  # Asegura que la sesión se actualice
+
+    print(f"Carrito actualizado: {cart}")
+
+    return jsonify({'message': 'Producto añadido al carrito correctamente'}), 200
 
 @app.route('/carrito')
 def carrito():
@@ -366,31 +371,66 @@ def carrito():
 def api_carrito():
     if 'cart' not in session:
         session['cart'] = {}
+    
     cart = session['cart']
     productos_con_cantidades = []
     total = 0
 
-    cnx = get_db_connection()
-    cursor = cnx.cursor(dictionary=True)
-
     if cart:
-        producto_ids = list(cart.keys())
-        cursor.execute('SELECT id, nombre, precio, stock FROM productos WHERE id IN (%s)' % ','.join(['%s'] * len(producto_ids)), producto_ids)
-        productos = cursor.fetchall()
+        try:
+            # Obtener los IDs de los productos en el carrito
+            producto_ids = set()  # Utilizamos un set para evitar duplicados
+            for cart_key in cart.keys():
+                producto_id = int(cart_key.split('-')[0])  # Extraemos solo el ID del producto
+                producto_ids.add(producto_id)
 
-        for producto in productos:
-            producto_id = str(producto['id'])
-            cantidad = cart.get(producto_id, 0)
-            total += producto['precio'] * cantidad
-            productos_con_cantidades.append({
-                'id': producto['id'],
-                'nombre': producto['nombre'],
-                'precio': producto['precio'],
-                'cantidad': cantidad,
-                'stock': producto['stock']
-            })
+            print(f"IDs de productos en el carrito: {producto_ids}")
 
-    cnx.close()
+            cnx = get_db_connection()
+            cursor = cnx.cursor(dictionary=True)
+
+            # Obtener los productos con esos IDs
+            formato_ids = ','.join(['%s'] * len(producto_ids))
+            query = f'''
+                SELECT p.id, p.nombre, p.precio, p.stock, pi.imagen, v.color, v.capacidad
+                FROM productos p
+                LEFT JOIN producto_imagenes pi ON p.id = pi.producto_id
+                LEFT JOIN producto_variantes v ON p.id = v.producto_id
+                WHERE p.id IN ({formato_ids})
+            '''
+            cursor.execute(query, list(producto_ids))
+            productos = cursor.fetchall()
+
+            print(f"Productos obtenidos de la base de datos: {productos}")
+
+            # Mapear los productos del carrito con los productos de la base de datos
+            for cart_key, valor in cart.items():
+                producto_id, color, capacidad = cart_key.split('-')
+
+                for producto in productos:
+                    # Filtramos solo la variante que coincide con la clave del carrito
+                    if int(producto_id) == producto['id'] and producto['color'] == color and producto['capacidad'] == capacidad:
+                        productos_con_cantidades.append({
+                            'id': producto['id'],
+                            'nombre': producto['nombre'],
+                            'precio': producto['precio'],
+                            'cantidad': valor['cantidad'],
+                            'stock': producto['stock'],
+                            'imagen': producto['imagen'],
+                            'color': valor['color'],
+                            'capacidad': valor['capacidad']
+                        })
+                        total += producto['precio'] * valor['cantidad']
+
+            cnx.close()
+
+        except Exception as e:
+            print(f"Error al obtener productos del carrito: {str(e)}")
+            return jsonify({'error': 'Error al obtener los productos del carrito.'}), 500
+
+    print(f"Productos en el carrito: {productos_con_cantidades}")
+    print(f"Total del carrito: {total}")
+
     return jsonify({"productos": productos_con_cantidades, "total": total})
 
 @app.route('/remove_from_cart/<int:producto_id>', methods=['POST'])
@@ -411,14 +451,22 @@ def remove_from_cart(producto_id):
 
 @app.route('/api/remove_from_cart/<int:producto_id>', methods=['POST'])
 def api_remove_from_cart(producto_id):
+    data = request.get_json()
+    color = data.get('color')
+    capacidad = data.get('capacidad')
+
     if 'cart' in session:
         cart = session['cart']
-        if str(producto_id) in cart:
-            del cart[str(producto_id)]
+        cart_key = f"{producto_id}-{color}-{capacidad}"  # Crear la clave combinada
+
+        if cart_key in cart:
+            del cart[cart_key]
             session['cart'] = cart
+            session.modified = True  # Marcar la sesión como modificada
             return jsonify({'message': 'Producto eliminado correctamente'}), 200
         else:
             return jsonify({'error': 'Producto no encontrado en el carrito'}), 404
+
     return jsonify({'error': 'Carrito no encontrado'}), 400
 
 @app.route('/update_cart/<int:producto_id>', methods=['POST'])

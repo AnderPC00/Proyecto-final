@@ -3,11 +3,11 @@ import axios from 'axios';
 import { checkSession } from '../api';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { showSuccessMessage, showErrorMessage } from '../utils/alertas'; // Importar las alertas
-import '../styles/Carrito.css'; // Importar estilos
+import { showSuccessMessage, showErrorMessage } from '../utils/alertas'; 
+import '../styles/Carrito.css'; 
 
 const Carrito = () => {
-    const { carrito, setCarrito, carritoCount, setCarritoCount } = useContext(AuthContext); 
+    const { carrito, setCarrito, setCarritoCount } = useContext(AuthContext);
     const [total, setTotal] = useState(0);
     const navigate = useNavigate();
 
@@ -43,7 +43,7 @@ const Carrito = () => {
         setTotal(nuevoTotal);
     };
 
-    const handleUpdateCantidad = (productoId, nuevaCantidad, stockDisponible) => {
+    const handleUpdateCantidad = (productoId, nuevaCantidad, stockDisponible, color, capacidad) => {
         if (nuevaCantidad < 1) return;
         if (nuevaCantidad > stockDisponible) {
             showErrorMessage('No puedes añadir más productos de los que hay en stock.');
@@ -51,12 +51,14 @@ const Carrito = () => {
         }
 
         axios.post(`http://localhost:5000/api/update_cart/${productoId}`, 
-            { cantidad: nuevaCantidad }, 
+            { cantidad: nuevaCantidad, color, capacidad }, 
             { headers: { 'Content-Type': 'application/json' }, withCredentials: true }
         )
         .then(() => {
             const productosActualizados = carrito.map(p =>
-                p.id === productoId ? { ...p, cantidad: nuevaCantidad } : p
+                p.id === productoId && p.color === color && p.capacidad === capacidad 
+                    ? { ...p, cantidad: nuevaCantidad } 
+                    : p
             );
             setCarrito(productosActualizados);
             recalcularTotal(productosActualizados);
@@ -68,10 +70,13 @@ const Carrito = () => {
         });
     };
 
-    const handleRemoveFromCart = (productoId) => {
-        axios.post(`http://localhost:5000/api/remove_from_cart/${productoId}`, {}, { withCredentials: true })
+    const handleRemoveFromCart = (productoId, color, capacidad) => {
+        axios.post(`http://localhost:5000/api/remove_from_cart/${productoId}`, 
+            { color, capacidad },  // Asegúrate de pasar el color y la capacidad correctos
+            { withCredentials: true }
+        )
         .then(() => {
-            const productosActualizados = carrito.filter(p => p.id !== productoId);
+            const productosActualizados = carrito.filter(p => !(p.id === productoId && p.color === color && p.capacidad === capacidad));
             setCarrito(productosActualizados);
             recalcularTotal(productosActualizados);
             setCarritoCount(productosActualizados.reduce((total, item) => total + item.cantidad, 0));
@@ -81,7 +86,7 @@ const Carrito = () => {
             showErrorMessage('Error al eliminar el producto.');
             console.error('Error al eliminar el producto:', error);
         });
-    };
+    };    
 
     const handleCheckout = () => {
         navigate('/checkout');
@@ -93,23 +98,25 @@ const Carrito = () => {
             {carrito && carrito.length > 0 ? (
                 <div>
                     <ul className="lista-productos">
-                        {carrito.map(producto => (
-                            <li key={producto.id} className="producto-carrito">
-                                <img src={producto.imagen} alt={producto.nombre} className="imagen-producto" />
+                        {carrito.map((producto, index) => (
+                            <li key={`${producto.id}-${producto.color}-${producto.capacidad}`} className="producto-carrito">
+                                <img src={`http://localhost:5000/static/images/${producto.imagen}`} alt={producto.nombre} className="imagen-producto" />
                                 <div>
                                     <h3>{producto.nombre}</h3>
                                     <p>Precio: €{producto.precio}</p>
+                                    <p>Color: {producto.color}</p>
+                                    <p>Capacidad: {producto.capacidad}</p>
                                     <div className="cantidad-control">
-                                        <button onClick={() => handleUpdateCantidad(producto.id, producto.cantidad - 1, producto.stock)}>-</button>
+                                        <button onClick={() => handleUpdateCantidad(producto.id, producto.cantidad - 1, producto.stock, producto.color, producto.capacidad)}>-</button>
                                         <input 
                                             type="number" 
                                             value={producto.cantidad} 
-                                            onChange={(e) => handleUpdateCantidad(producto.id, parseInt(e.target.value), producto.stock)}
+                                            onChange={(e) => handleUpdateCantidad(producto.id, parseInt(e.target.value), producto.stock, producto.color, producto.capacidad)}
                                             min="1"
                                         />
-                                        <button onClick={() => handleUpdateCantidad(producto.id, producto.cantidad + 1, producto.stock)}>+</button>
+                                        <button onClick={() => handleUpdateCantidad(producto.id, producto.cantidad + 1, producto.stock, producto.color, producto.capacidad)}>+</button>
                                     </div>
-                                    <button className="btn btn-danger" onClick={() => handleRemoveFromCart(producto.id)}>Eliminar</button>
+                                    <button className="btn btn-danger" onClick={() => handleRemoveFromCart(producto.id, producto.color, producto.capacidad)}>Eliminar</button>
                                 </div>
                             </li>
                         ))}

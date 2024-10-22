@@ -18,9 +18,9 @@
   }
   
   .imagen-producto {
-    width: 80px;
+    width: 150px;
     height: auto;
-    margin-right: 20px;
+    object-fit: cover;
   }
   
   .cantidad-control {
