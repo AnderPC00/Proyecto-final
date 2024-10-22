@@ -7,6 +7,7 @@ const Producto = () => {
   const { id } = useParams(); // Obtenemos el ID del producto desde la URL
   const [producto, setProducto] = useState(null);
   const [error, setError] = useState(null);
+  const [mostrarMas, setMostrarMas] = useState(false); // Estado para mostrar más detalles
 
   useEffect(() => {
     // Llamada a la API para obtener los detalles del producto
@@ -18,6 +19,10 @@ const Producto = () => {
         setError('Error al cargar los detalles del producto');
       });
   }, [id]);
+
+  const toggleMostrarMas = () => {
+    setMostrarMas(!mostrarMas); // Alternar entre mostrar más y menos
+  };
 
   if (error) {
     return <p>{error}</p>;
@@ -34,7 +39,7 @@ const Producto = () => {
     <div className="producto-detalle">
       <h1>{producto.nombre}</h1>
       <p>Precio: €{producto.precio}</p>
-      <p>Descripción: {producto.descripcion}</p>
+      <p>Descripción corta: {producto.descripcion_corta}</p> {/* Mostrar la descripción corta */}
 
       {/* Mostrar la imagen del producto */}
       {imagenes.length > 0 && (
@@ -43,6 +48,19 @@ const Producto = () => {
           alt={producto.nombre} 
           className="producto-imagen"
         />
+      )}
+
+      {/* Botón para alternar entre mostrar más y menos */}
+      <button className="btn-mostrar-mas" onClick={toggleMostrarMas}>
+        {mostrarMas ? "Mostrar menos" : "Mostrar más"}
+      </button>
+
+      {/* Mostrar más detalles si se hace clic en el botón */}
+      {mostrarMas && (
+        <div className="informacion-adicional">
+          <p><strong>Descripción completa:</strong> {producto.descripcion_larga}</p>
+          <p><strong>Stock disponible:</strong> {producto.stock}</p>
+        </div>
       )}
     </div>
   );

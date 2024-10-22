@@ -25,7 +25,7 @@ h1, h2 {
   font-size: $fuente-media;
 
   &:hover {
-    background-color: $color-primario-hover;
+    background-color: aqua;
   }
 }
 
@@ -59,4 +59,8 @@ h1, h2 {
     width: 100%;
     padding: $padding-grande;
   }
+}
+
+button:hover {
+  background-color: #81beff;
 }
