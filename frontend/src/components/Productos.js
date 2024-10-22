@@ -182,14 +182,16 @@ const Productos = () => {
                                     )}
                                 </div>
                                 <h2>{producto.nombre}</h2>
-                                <p>{producto.descripcion}</p> {/* Mostrar la descripción del producto */}
-                                <p>Precio: €{producto.precio}</p>
-                                
-                                <p className={stockClase}>
-                                    {selectedColor[producto.id] && selectedCapacidad[producto.id]
-                                        ? `Stock disponible: ${stock[producto.id] !== undefined ? stock[producto.id] : '0'}`
-                                        : 'Stock disponible: Selecciona color y capacidad'}
-                                </p>
+                                <p className="producto-descripcion">{producto.descripcion}</p> {/* Mostrar la descripción del producto */}
+                                <div className="producto-info">
+                                    <p className="producto-precio">Precio: €{producto.precio}</p>
+                                    
+                                    <p className={stockClase}>
+                                        {selectedColor[producto.id] && selectedCapacidad[producto.id]
+                                            ? `Stock disponible: ${stock[producto.id] !== undefined ? stock[producto.id] : '0'}`
+                                            : 'Stock disponible: Selecciona color y capacidad'}
+                                    </p>
+                                </div>
 
                                 {colores.length > 0 && capacidades.length > 0 ? (
                                     <>

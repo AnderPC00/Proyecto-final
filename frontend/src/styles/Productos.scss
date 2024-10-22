@@ -18,6 +18,9 @@
   background-color: white;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; // Espaciado entre la imagen, la descripción y el stock
 
   &:hover {
     transform: translateY(-10px);
@@ -32,6 +35,21 @@
   border-radius: $borde-redondeado-grande;
 }
 
+// Descripción centrada del producto
+.producto-descripcion {
+  color: #555; // Color gris oscuro
+  font-size: 14px; // Tamaño de fuente ajustado
+  margin: 10px 0; // Margen para espaciado superior e inferior
+  text-align: center; // Centrado del texto
+}
+
+// Precio del producto
+.producto-precio {
+  color: #007bff;
+  font-size: 18px;
+  margin-bottom: 10px; // Ajusta el espaciado del precio
+}
+
 // Selectores de color y capacidad
 select {
   width: 100%;
@@ -43,17 +61,19 @@ select {
   font-size: $fuente-media;
 }
 
+.stock-disponible, .sin-stock, .stock-por-seleccionar {
+  font-weight: bold;
+  margin-top: 10px; // Espaciado adicional entre la información de stock y el precio
+}
+
 .stock-disponible {
-    color: green;
-    font-weight: bold;
-  }
-  
-  .sin-stock {
-    color: red;
-    font-weight: bold;
-  }
-  
-  .stock-por-seleccionar {
-    color: green; /* Verde si aún no se seleccionó ni color ni capacidad */
-    font-weight: bold;
-  }
+  color: green;
+}
+
+.sin-stock {
+  color: red;
+}
+
+.stock-por-seleccionar {
+  color: green; // Verde si aún no se seleccionó ni color ni capacidad
+}
