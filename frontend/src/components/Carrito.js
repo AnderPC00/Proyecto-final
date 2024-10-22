@@ -49,7 +49,7 @@ const Carrito = () => {
             showErrorMessage('No puedes añadir más productos de los que hay en stock.');
             return;
         }
-
+    
         axios.post(`http://localhost:5000/api/update_cart/${productoId}`, 
             { cantidad: nuevaCantidad, color, capacidad }, 
             { headers: { 'Content-Type': 'application/json' }, withCredentials: true }
@@ -68,7 +68,7 @@ const Carrito = () => {
             showErrorMessage('Error al actualizar la cantidad.');
             console.error('Error al actualizar la cantidad:', error);
         });
-    };
+    };    
 
     const handleRemoveFromCart = (productoId, color, capacidad) => {
         axios.post(`http://localhost:5000/api/remove_from_cart/${productoId}`, 

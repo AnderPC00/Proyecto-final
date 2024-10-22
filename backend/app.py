@@ -510,8 +510,10 @@ def update_cart(producto_id):
 
 @app.route('/api/update_cart/<int:producto_id>', methods=['POST'])
 def api_update_cart(producto_id):
-    data = request.get_json()  # Asegurarse de que se está recibiendo JSON
+    data = request.get_json()
     nueva_cantidad = data.get('cantidad')
+    color = data.get('color')
+    capacidad = data.get('capacidad')
 
     if nueva_cantidad is None or nueva_cantidad < 1:
         return jsonify({'error': 'Cantidad inválida'}), 400
@@ -520,13 +522,22 @@ def api_update_cart(producto_id):
         return jsonify({'error': 'Carrito no encontrado'}), 400
 
     cart = session['cart']
-    if str(producto_id) in cart:
-        cart[str(producto_id)] = nueva_cantidad
+    cart_key = f"{producto_id}-{color}-{capacidad}"
+
+    # Verificar si el producto con la variante específica está en el carrito
+    if cart_key in cart:
+        if nueva_cantidad > 0:
+            # Actualiza la cantidad
+            cart[cart_key]['cantidad'] = nueva_cantidad
+        else:
+            # Si la cantidad es 0 o menor, elimina el producto del carrito
+            del cart[cart_key]
         session['cart'] = cart
+        session.modified = True  # Asegura que la sesión se actualice
         return jsonify({'message': 'Cantidad actualizada correctamente'}), 200
     else:
         return jsonify({'error': 'Producto no encontrado en el carrito'}), 404
-
+    
 @app.route('/api/checkout', methods=['POST'])
 def api_checkout():
     data = request.get_json()
