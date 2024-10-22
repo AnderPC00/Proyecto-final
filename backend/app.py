@@ -503,10 +503,9 @@ def api_carrito():
             # Obtener los productos con esos IDs y sus variantes
             formato_ids = ','.join(['%s'] * len(producto_ids))
             query = f'''
-                SELECT p.id, p.nombre, p.precio, pi.imagen, 
+                SELECT p.id, p.nombre, p.precio, p.imagen, 
                        v.color, v.capacidad, v.stock
                 FROM productos p
-                LEFT JOIN producto_imagenes pi ON p.id = pi.producto_id
                 LEFT JOIN producto_variantes v ON p.id = v.producto_id
                 WHERE p.id IN ({formato_ids})
             '''
@@ -528,7 +527,7 @@ def api_carrito():
                             'precio': producto['precio'],
                             'cantidad': valor['cantidad'],
                             'stock': producto['stock'],  # Stock por variante
-                            'imagen': producto['imagen'],
+                            'imagen': f"http://localhost:5000/static/images/{producto['imagen']}",  # Ruta completa para la imagen
                             'color': producto['color'],
                             'capacidad': producto['capacidad']
                         })

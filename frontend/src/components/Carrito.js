@@ -100,7 +100,13 @@ const Carrito = () => {
                     <ul className="lista-productos">
                         {carrito.map((producto, index) => (
                             <li key={`${producto.id}-${producto.color}-${producto.capacidad}`} className="producto-carrito">
-                                <img src={`http://localhost:5000/static/images/${producto.imagen}`} alt={producto.nombre} className="imagen-producto" />
+                                {/* Actualizamos la ruta de la imagen */}
+                                <img 
+                                    src={producto.imagen} 
+                                    alt={producto.nombre} 
+                                    className="imagen-producto" 
+                                    onError={(e) => { e.target.src = 'http://localhost:5000/static/images/default.jpg'; }} // Imagen por defecto si falla
+                                />
                                 <div>
                                     <h3>{producto.nombre}</h3>
                                     <p>Precio: €{producto.precio}</p>
