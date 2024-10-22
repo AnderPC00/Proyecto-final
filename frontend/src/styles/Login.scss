@@ -1,0 +1,86 @@
+$primary-color: #3498db;
+$secondary-color: #2ecc71;
+$error-color: #e74c3c;
+$background-color: #f5f5f5;
+$border-radius: 5px;
+$input-border-color: #ccc;
+$button-hover-color: darken($primary-color, 10%);
+
+body {
+  background-color: $background-color;
+  font-family: 'Arial', sans-serif;
+}
+
+.login-page {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;  // Cambiado para que el contenido se alinee al inicio, más cerca del navbar
+  min-height: 100vh;
+  padding-top: 50px; // Asegura un poco de espacio debajo del navbar
+
+  @media (max-width: 768px) {
+    padding-top: 30px;  // Menos espacio en pantallas móviles
+  }
+
+  .login-container {
+    width: 100%;
+    max-width: 350px;
+    padding: 30px;
+    background-color: white;
+    border-radius: $border-radius;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    text-align: center;
+  }
+
+  h1 {
+    color: $primary-color;
+    margin-bottom: 20px;
+  }
+
+  .login-form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    input {
+      width: 100%;
+      max-width: 300px;
+      margin: 12px 0;
+      padding: 14px;
+      font-size: 16px;
+      border: 1px solid $input-border-color;
+      border-radius: $border-radius;
+      transition: border-color 0.3s ease-in-out;
+
+      &:focus {
+        border-color: $primary-color;
+        outline: none;
+      }
+    }
+
+    button {
+      width: 100%;
+      max-width: 300px;
+      padding: 12px 0;
+      background-color: $primary-color;
+      color: white;
+      border: none;
+      border-radius: $border-radius;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s ease-in-out;
+      margin-top: 20px;
+
+      &:hover {
+        background-color: $button-hover-color;
+      }
+    }
+  }
+
+  .error-message {
+    color: $error-color;
+    text-align: center;
+    font-size: 14px;
+    margin-top: 10px;
+  }
+}

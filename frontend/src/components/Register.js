@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import '../styles/Register.scss';
 
 const Register = () => {
   const [username, setUsername] = useState('');
@@ -25,25 +26,27 @@ const Register = () => {
   };
 
   return (
-    <div>
-      <h1>Registrarse</h1>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="Nombre de usuario"
-          required
-        />
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Contraseña"
-          required
-        />
-        <button type="submit">Registrarse</button>
-      </form>
+    <div className="register-page">
+      <div className="register-container">
+        <h1>Registrarse</h1>
+        <form className="register-form" onSubmit={handleSubmit}>
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Nombre de usuario"
+            required
+          />
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Contraseña"
+            required
+          />
+          <button type="submit">Registrarse</button>
+        </form>
+      </div>
     </div>
   );
 };

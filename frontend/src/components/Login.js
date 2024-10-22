@@ -1,13 +1,14 @@
-import React, { useState, useContext } from 'react';  // Una sola importación de React
+import React, { useState, useContext } from 'react';  
 import axios from 'axios';
-import { AuthContext } from '../context/AuthContext';  // Importa el contexto
+import { AuthContext } from '../context/AuthContext';  
 import { useNavigate } from 'react-router-dom';
+import '../styles/Login.scss';
 
 const Login = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [errorMessage, setErrorMessage] = useState('');  // Estado para el mensaje de error
-    const { login } = useContext(AuthContext);  // Obtén la función login del contexto
+    const [errorMessage, setErrorMessage] = useState('');  
+    const { login } = useContext(AuthContext);  
     const navigate = useNavigate();
 
     const handleSubmit = (e) => {
@@ -15,12 +16,11 @@ const Login = () => {
 
         axios.post('http://localhost:5000/api/login', { username, password })
             .then(response => {
-                login(response.data);  // Llama a la función login para guardar el usuario
-                navigate('/carrito');  // Redirige al carrito
+                login(response.data);  
+                navigate('/carrito');  
             })
             .catch(error => {
                 if (error.response && error.response.status === 401) {
-                    // Mostrar mensaje de error si las credenciales son incorrectas
                     setErrorMessage('Usuario o contraseña incorrectos');
                 } else {
                     setErrorMessage('Ocurrió un error, por favor intente de nuevo');
@@ -30,26 +30,28 @@ const Login = () => {
     };
 
     return (
-        <div>
-            <h1>Iniciar Sesión</h1>
-            {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>} {/* Mostrar mensaje de error */}
-            <form onSubmit={handleSubmit}>
-                <input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Nombre de usuario"
-                    required
-                />
-                <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Contraseña"
-                    required
-                />
-                <button type="submit">Iniciar sesión</button>
-            </form>
+        <div className="login-page"> {/* Añadimos la clase "login-page" */}
+            <div className="login-container">
+                <h1>Iniciar Sesión</h1>
+                {errorMessage && <p className="error-message">{errorMessage}</p>}
+                <form className="login-form" onSubmit={handleSubmit}>
+                    <input
+                        type="text"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="Nombre de usuario"
+                        required
+                    />
+                    <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Contraseña"
+                        required
+                    />
+                    <button type="submit">Iniciar sesión</button>
+                </form>
+            </div>
         </div>
     );
 };

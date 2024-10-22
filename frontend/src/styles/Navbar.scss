@@ -1,82 +1,37 @@
 @import 'variables';
 
-.navbar {
-  display: flex;
-  justify-content: space-between;
-  padding: $padding-medio $padding-grande;
-  background-color: $color-fondo;
-  border-bottom: 1px solid $color-borde;
+$primary-color: #3498db;
+$secondary-color: #2ecc71;
+$border-radius: 5px;
+$search-input-width: 250px;
+
+.search-form {
+  display: flex;           // Asegura que el input y el botón estén en la misma línea
+  align-items: center;      // Alinea verticalmente el input y el botón
 }
 
-.navbar ul {
-  display: flex;
-  list-style: none;
+.form-control {
+  width: $search-input-width;  // Asegura un ancho fijo para el input
+  border-radius: $border-radius 0 0 $border-radius;  // Bordes redondeados a la izquierda
+  margin-right: -1px;       // Elimina el pequeño espacio entre el input y el botón
 }
 
-.navbar li {
-  margin-left: $padding-pequeno;
-}
-
-.navbar a {
-  text-decoration: none;
-  color: $color-texto;
-  font-weight: bold;
-  transition: color 0.3s ease;
+.btn-outline-success {
+  border-radius: 0 $border-radius $border-radius 0;  // Bordes redondeados a la derecha
+  border-color: $primary-color;
+  color: $primary-color;
 
   &:hover {
-    color: $color-primario;
+    background-color: $primary-color;
+    color: white;
+  }
+
+  i {
+    font-size: 1.2rem;
   }
 }
 
-.cerrar-sesion {
-  background-color: #dc3545;
-  color: white;
-  padding: $padding-pequeno $padding-medio;
-  border-radius: $radio-borde-grande;
-  transition: background-color 0.3s ease;
-
-  &:hover {
-    background-color: darken(#dc3545, 10%);
-  }
-}
-
-.badge {
-  font-size: 0.8rem;
-  padding: 0.5rem;
-  border-radius: 50%;
-}
-
-.bienvenido-text {
-  margin-right: $padding-grande; /* Ajuste para darle espacio al botón de cerrar sesión */
-  font-size: $fuente-media;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-}
-
-.navbar-nav .nav-item {
-  display: flex;
-  align-items: center;
-}
-
-.align-items-center {
-  display: flex;
-  align-items: center;
-}
-
-.search-bar button {
-    margin-top: 0;  /* Elimina el margen superior */
-    padding: 0.5rem;  /* Ajusta el padding si es necesario */
-    display: flex;
-    align-items: center;  /* Asegúrate de que el icono esté alineado */
-}
 button.btn.btn-outline-success {
-    margin-top: 0;
-}
-
-// Media queries para pantallas grandes
-@media (min-width: 768px) {
-  .navbar-collapse {
-    display: flex !important;
-  }
+  margin-top: 0px;
+  margin-left: 4px;
 }

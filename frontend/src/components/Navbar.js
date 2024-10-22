@@ -1,22 +1,20 @@
 import React, { useState, useContext } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // Importa useNavigate para redirigir
+import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import '../styles/Navbar.scss';
 
 const Navbar = ({ onSearch }) => {
   const { usuario, logout, carritoCount } = useContext(AuthContext);
   const [searchQuery, setSearchQuery] = useState('');
-  const navigate = useNavigate(); // Hook para navegar programáticamente
+  const navigate = useNavigate();
 
   const handleSearch = (e) => {
     e.preventDefault();
 
-    // Si se proporciona la función onSearch, ejecutarla
     if (typeof onSearch === 'function') {
       onSearch(searchQuery);
     }
 
-    // Redirigir a la página de productos con el término de búsqueda en la URL
     if (searchQuery.trim() !== '') {
       navigate(`/productos?nombre=${encodeURIComponent(searchQuery.trim())}`);
     }
@@ -55,16 +53,17 @@ const Navbar = ({ onSearch }) => {
               </Link>
             </li>
           </ul>
-          <form className="d-flex" onSubmit={handleSearch}>
+          {/* Asegura que el form y el botón estén alineados */}
+          <form className="d-flex search-form align-items-center" onSubmit={handleSearch}>
             <input
-              className="form-control me-2"
+              className="form-control"
               type="search"
               placeholder="Buscar productos"
-              aria-label="Buscar"
+              aria-label="Buscar productos"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <button className="btn btn-outline-success" type="submit">
+            <button className="btn btn-outline-success" type="submit" aria-label="Buscar">
               <i className="fas fa-search"></i>
             </button>
           </form>
