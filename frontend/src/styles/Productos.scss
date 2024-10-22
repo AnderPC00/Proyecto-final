@@ -35,12 +35,34 @@
   border-radius: $borde-redondeado-grande;
 }
 
-// Descripción centrada del producto
+// Descripción centrada del producto con funcionalidad de "Mostrar más"
 .producto-descripcion {
-  color: #555; // Color gris oscuro
-  font-size: 14px; // Tamaño de fuente ajustado
-  margin: 10px 0; // Margen para espaciado superior e inferior
-  text-align: center; // Centrado del texto
+  color: #555;
+  font-size: 14px;
+  margin-bottom: 10px;
+  max-height: 4.2em; /* Limita a 3 líneas */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3; /* Limita a 3 líneas */
+  -webkit-box-orient: vertical;
+  white-space: normal;
+  position: relative;
+  line-height: 1.4em;
+  transition: max-height 0.3s ease;
+}
+
+.mostrar-mas {
+  display: inline-block;
+  text-align: right;
+  color: #007bff;
+  cursor: pointer;
+  margin-top: 5px;
+  font-size: 12px;
+}
+
+.mostrar-completa {
+  max-height: none; /* Elimina el límite de altura cuando se muestra todo */
 }
 
 // Precio del producto

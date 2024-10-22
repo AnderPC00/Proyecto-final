@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import '../styles/Login.scss';
 
 const Login = () => {
-    const [email, setEmail] = useState('');  // Cambiado a email
+    const [email, setEmail] = useState('');  
     const [password, setPassword] = useState('');
     const [errorMessage, setErrorMessage] = useState('');  
     const { login } = useContext(AuthContext);  
@@ -14,14 +14,14 @@ const Login = () => {
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        axios.post('http://localhost:5000/api/login', { email, password })  // Cambiado a email
+        axios.post('http://localhost:5000/api/login', { email, password })  
             .then(response => {
                 login(response.data);  
                 navigate('/carrito');  
             })
             .catch(error => {
                 if (error.response && error.response.status === 401) {
-                    setErrorMessage('Correo o contraseña incorrectos');  // Cambiado a correo
+                    setErrorMessage('Correo o contraseña incorrectos');  
                 } else {
                     setErrorMessage('Ocurrió un error, por favor intente de nuevo');
                 }

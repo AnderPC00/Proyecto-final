@@ -72,7 +72,7 @@ const Carrito = () => {
 
     const handleRemoveFromCart = (productoId, color, capacidad) => {
         axios.post(`http://localhost:5000/api/remove_from_cart/${productoId}`, 
-            { color, capacidad },  // Asegúrate de pasar el color y la capacidad correctos
+            { color, capacidad },  // Asegúrarse de pasar el color y la capacidad correctos
             { withCredentials: true }
         )
         .then(() => {
@@ -100,7 +100,7 @@ const Carrito = () => {
                     <ul className="lista-productos">
                         {carrito.map((producto, index) => (
                             <li key={`${producto.id}-${producto.color}-${producto.capacidad}`} className="producto-carrito">
-                                {/* Actualizamos la ruta de la imagen */}
+                                {/* Actualizar la ruta de la imagen */}
                                 <img 
                                     src={producto.imagen} 
                                     alt={producto.nombre} 

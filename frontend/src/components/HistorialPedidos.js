@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getHistorialPedidos } from '../api'; // Importamos la función desde api.js
+import { getHistorialPedidos } from '../api'; // Importar la función desde api.js
 
 const HistorialPedidos = () => {
     const [pedidos, setPedidos] = useState([]);
@@ -12,7 +12,7 @@ const HistorialPedidos = () => {
                 if (Array.isArray(response.data)) {
                     setPedidos(response.data);
                 } else {
-                    setPedidos([]); // En caso de que no sea un array, lo dejamos vacío
+                    setPedidos([]); // En caso de que no sea un array, se deja vacío
                 }
             })
             .catch(error => {

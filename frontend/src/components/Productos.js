@@ -9,7 +9,7 @@ import { useLocation } from 'react-router-dom';
 const Productos = () => {
     const location = useLocation();
     const searchParams = new URLSearchParams(location.search);
-    const searchQuery = searchParams.get('nombre') || ''; // Obtener el valor de 'nombre' de la URL para filtrar por nombre del producto
+    const searchQuery = searchParams.get('nombre') || ''; 
 
     const [productos, setProductos] = useState([]);
     const [productosFiltrados, setProductosFiltrados] = useState([]);
@@ -17,22 +17,24 @@ const Productos = () => {
     const [selectedColor, setSelectedColor] = useState({});
     const [selectedCapacidad, setSelectedCapacidad] = useState({});
     const [stock, setStock] = useState({});
-    const [stockTotal, setStockTotal] = useState({}); // Para verificar si alguna variante tiene stock
+    const [stockTotal, setStockTotal] = useState({});
 
-    // Cargar todos los productos al montar el componente
+    const [mostrarDescripcionCompleta, setMostrarDescripcionCompleta] = useState({});
+
+    // Cargar todos los productos
     useEffect(() => {
         axios.get('http://localhost:5000/api/productos')
             .then(response => {
                 setProductos(response.data);
-                setProductosFiltrados(response.data); // Mostrar todos los productos por defecto
-                calcularStockTotal(response.data); // Calcular si hay stock disponible para las variantes
+                setProductosFiltrados(response.data);
+                calcularStockTotal(response.data);
             })
             .catch(error => {
                 showErrorMessage('Error al cargar los productos');
             });
     }, []);
 
-    // Filtrar los productos según la búsqueda o el nombre del producto en la query string
+    // Filtrar los productos
     useEffect(() => {
         if (searchQuery) {
             const productosFiltrados = productos.filter(producto =>
@@ -40,11 +42,10 @@ const Productos = () => {
             );
             setProductosFiltrados(productosFiltrados);
         } else {
-            setProductosFiltrados(productos); // Mostrar todos si no hay filtro de búsqueda
+            setProductosFiltrados(productos); 
         }
     }, [searchQuery, productos]);
 
-    // Calcular si el producto tiene stock en alguna variante
     const calcularStockTotal = (productos) => {
         const stockInfo = {};
         productos.forEach(producto => {
@@ -57,7 +58,6 @@ const Productos = () => {
         setStockTotal(stockInfo);
     };
 
-    // Manejar cambio de color
     const handleColorChange = (productoId, color) => {
         setSelectedColor(prev => ({
             ...prev,
@@ -75,7 +75,6 @@ const Productos = () => {
         }));
     };
 
-    // Manejar cambio de capacidad
     const handleCapacidadChange = (productoId, capacidad) => {
         setSelectedCapacidad(prev => ({
             ...prev,
@@ -88,7 +87,6 @@ const Productos = () => {
         }
     };
 
-    // Actualizar stock según color y capacidad seleccionados
     const actualizarStock = (productoId, color, capacidad) => {
         const producto = productos.find(p => p.id === productoId);
         if (!producto || !producto.variantes) {
@@ -96,10 +94,9 @@ const Productos = () => {
             return;
         }
 
-        // Filtrar la variante seleccionada de las variantes disponibles
         const variante = producto.variantes.find(v => v.startsWith(`${color}-${capacidad}`));
         if (variante) {
-            const stockDisponible = variante.split('-')[2];  // El tercer valor es el stock
+            const stockDisponible = variante.split('-')[2];  
             setStock(prev => ({
                 ...prev,
                 [productoId]: parseInt(stockDisponible)
@@ -109,7 +106,6 @@ const Productos = () => {
         }
     };
 
-    // Función para añadir un producto al carrito
     const handleAddToCart = (productoId) => {
         const color = selectedColor[productoId];
         const capacidad = selectedCapacidad[productoId];
@@ -119,7 +115,6 @@ const Productos = () => {
             return;
         }
 
-        // Verificar si hay stock disponible para la variante seleccionada
         const stockDisponible = stock[productoId] || 0;
 
         if (stockDisponible < 1) {
@@ -133,7 +128,6 @@ const Productos = () => {
         )
         .then(response => {
             showSuccessMessage('Producto añadido al carrito');
-            // Actualizar el carrito después de agregar el producto
             axios.get('http://localhost:5000/api/carrito', { withCredentials: true })
                 .then(response => {
                     setCarrito(response.data.productos);
@@ -149,28 +143,31 @@ const Productos = () => {
         });
     };
 
+    const toggleDescripcion = (productoId) => {
+        setMostrarDescripcionCompleta(prev => ({
+            ...prev,
+            [productoId]: !prev[productoId] 
+        }));
+    };
+
     return (
         <div>
             <h1>Productos Disponibles</h1>
             {productosFiltrados.length > 0 ? (
                 <ul className="productos-lista">
                     {productosFiltrados.map(producto => {
-                        const imagen = producto.imagen; // Obtener la imagen directamente de la tabla productos
+                        const imagen = producto.imagen; 
                         const colores = producto.variantes ? [...new Set(producto.variantes.map(v => v.split('-')[0]))] : [];
                         const capacidades = producto.variantes ? [...new Set(producto.variantes.map(v => v.split('-')[1]))] : [];
 
-                        const primeraImagen = imagen ? imagen : ''; // Obtener la imagen si está disponible
+                        const primeraImagen = imagen ? imagen : ''; 
 
-                        // Determinar si hay stock total para el producto
                         const stockDisponible = stock[producto.id];
                         let stockClase = '';
 
-                        // Lógica para determinar el mensaje y color
                         if (selectedColor[producto.id] && selectedCapacidad[producto.id]) {
-                            // Si seleccionamos color y capacidad, mostrar el stock
                             stockClase = stockDisponible > 0 ? 'stock-disponible' : 'sin-stock';
                         } else if (!selectedColor[producto.id] || !selectedCapacidad[producto.id]) {
-                            // Si no se seleccionaron opciones, mostrar "Selecciona color y capacidad" en verde si tiene stock
                             stockClase = stockTotal[producto.id] ? 'stock-por-seleccionar' : 'sin-stock';
                         }
 
@@ -182,7 +179,17 @@ const Productos = () => {
                                     )}
                                 </div>
                                 <h2>{producto.nombre}</h2>
-                                <p className="producto-descripcion">{producto.descripcion}</p> {/* Mostrar la descripción del producto */}
+                                
+                                <p className={`producto-descripcion ${mostrarDescripcionCompleta[producto.id] ? 'mostrar-completa' : 'mostrar-parcial'}`}>
+                                    {producto.descripcion}
+                                </p>
+                                <span 
+                                    className="mostrar-mas" 
+                                    onClick={() => toggleDescripcion(producto.id)}
+                                >
+                                    {mostrarDescripcionCompleta[producto.id] ? '▲' : '▼'}
+                                </span>
+
                                 <div className="producto-info">
                                     <p className="producto-precio">Precio: €{producto.precio}</p>
                                     
@@ -226,5 +233,5 @@ const Productos = () => {
         </div>
     );
 };
-
+        
 export default Productos;

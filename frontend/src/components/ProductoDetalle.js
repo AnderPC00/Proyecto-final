@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom'; // Usamos useSearchParams para obtener la query string
+import { useSearchParams } from 'react-router-dom'; // Usar useSearchParams para obtener la query string
 import axios from 'axios';
 import '../styles/ProductoDetalle.scss'; 
 
 const ProductoDetalle = () => {
-  const [searchParams] = useSearchParams();  // Obtenemos la query string
-  const nombre = searchParams.get('nombre'); // Sacamos el nombre del producto
+  const [searchParams] = useSearchParams();  // Obtener la query string
+  const nombre = searchParams.get('nombre'); // Sacar el nombre del producto
   const [producto, setProducto] = useState(null);
   const [colorSeleccionado, setColorSeleccionado] = useState('');
   const [capacidadSeleccionada, setCapacidadSeleccionada] = useState('');

@@ -32,9 +32,9 @@ login_manager.login_view = 'login'
 class User(UserMixin):
     def __init__(self, id, rol=None, username=None, email=None):
         self.id = id
-        self.rol = rol  # Agregamos el rol
-        self.username = username  # Puedes agregar otros atributos, como el nombre de usuario
-        self.email = email  # También puedes incluir el email si lo necesitas
+        self.rol = rol  # Agregar el rol
+        self.username = username  # Agregar otros atributos, como el nombre de usuario
+        self.email = email  # Incluir el email si se necesita
 
     def get_id(self):
         return str(self.id)
@@ -46,7 +46,7 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
-    cnx = get_db_connection()  # Asegúrate de que estás usando la función correcta para obtener la conexión a la base de datos
+    cnx = get_db_connection()  # Asegurarse que se esta usando la función correcta para obtener la conexión a la base de datos
     cursor = cnx.cursor(dictionary=True)
     
     # Consultar la base de datos para obtener la información del usuario
@@ -58,8 +58,8 @@ def load_user(user_id):
         # Retornar el objeto User con los datos del usuario autenticado, incluyendo el rol y otros atributos
         return User(
             user_data['id'],
-            rol=user_data.get('rol'),  # Obtenemos el rol del usuario
-            username=user_data.get('username'),  # Incluir el nombre de usuario
+            rol=user_data.get('rol'),  # Obtener el rol del usuario
+            username=user_data.get('username'),  # Nombre de usuario
             email=user_data.get('email')  # Incluir el email
         )
     return None
@@ -187,7 +187,7 @@ def login():
 @app.route('/api/login', methods=['POST'])
 def api_login():
     data = request.json
-    email = data.get('email')  # Cambiamos a email
+    email = data.get('email') 
     password = data.get('password')
 
     cnx = get_db_connection()
@@ -350,7 +350,7 @@ def obtener_productos_destacados():
         cnx = get_db_connection()
         cursor = cnx.cursor(dictionary=True)
 
-        # Aseguramos que se obtengan las imágenes desde la tabla productos
+        # Asegura que se obtengan las imágenes desde la tabla productos
         query = '''
             SELECT p.id, p.nombre, p.precio, p.imagen AS imagenes
             FROM productos p
@@ -490,9 +490,9 @@ def api_carrito():
     if cart:
         try:
             # Obtener los IDs de los productos en el carrito
-            producto_ids = set()  # Utilizamos un set para evitar duplicados
+            producto_ids = set()  # Utilizar un set para evitar duplicados
             for cart_key in cart.keys():
-                producto_id = int(cart_key.split('-')[0])  # Extraemos solo el ID del producto
+                producto_id = int(cart_key.split('-')[0])  # Extraer solo el ID del producto
                 producto_ids.add(producto_id)
 
             print(f"IDs de productos en el carrito: {producto_ids}")
@@ -519,7 +519,7 @@ def api_carrito():
                 producto_id, color, capacidad = cart_key.split('-')
 
                 for producto in productos:
-                    # Filtramos solo la variante que coincide con la clave del carrito
+                    # Filtrar solo la variante que coincide con la clave del carrito
                     if int(producto_id) == producto['id'] and producto['color'] == color and producto['capacidad'] == capacidad:
                         productos_con_cantidades.append({
                             'id': producto['id'],
@@ -915,7 +915,7 @@ def obtener_producto():
     return jsonify(producto)
 
 @app.route('/api/importar_productos', methods=['POST'])
-@login_required  # Asegúrate de que el usuario esté autenticado
+@login_required  # Asegúrarse de que el usuario esta autenticado
 def importar_productos():
     if current_user.rol != 'admin':  # Solo permitir a administradores
         return jsonify({'error': 'No tienes permiso para realizar esta acción.'}), 403

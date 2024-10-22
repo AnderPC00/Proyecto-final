@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import '../styles/Producto.scss'; // Añade tus estilos personalizados
+import '../styles/Producto.scss'; // Añadir los estilos personalizados
 
 const Producto = () => {
-  const { id } = useParams(); // Obtenemos el ID del producto desde la URL
+  const { id } = useParams(); // Obtener el ID del producto desde la URL
   const [producto, setProducto] = useState(null);
   const [error, setError] = useState(null);
   const [mostrarMas, setMostrarMas] = useState(false); // Estado para mostrar más detalles

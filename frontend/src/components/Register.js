@@ -5,7 +5,7 @@ import '../styles/Register.scss';
 
 const Register = () => {
   const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');  // Cambiamos de 'correo' a 'email'
+  const [email, setEmail] = useState(''); 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -44,7 +44,7 @@ const Register = () => {
     // Preparación de los datos para enviar
     const formData = new URLSearchParams();
     formData.append('username', username);
-    formData.append('email', email);  // Cambiamos 'correo' a 'email'
+    formData.append('email', email);  
     formData.append('password', password);
     formData.append('confirm_password', confirmPassword);
 

@@ -1,6 +1,6 @@
 from werkzeug.security import check_password_hash
 
-# Supongamos que obtienes el hash de la base de datos
+# Suponer que se obtiene el hash de la base de datos
 stored_hash = 'scrypt:32768:8:1$QJeUOh1An6siwOOV$4a76cd4ae9ca9531d65c344aac09f536793c0f74efbc085a4fa6cf909ee08bcf4880cc32125a0d1c2cd67c8cdbae1db9ca330e3ecad30e3ef7e4aa3a8edfefe1'
 
 # Verifica la contraseña ingresada por el usuario

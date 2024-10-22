@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import '../styles/Direccion.scss';  // Asegúrate de tener tu archivo de estilos
+import '../styles/Direccion.scss';  // Asegurarse de tener el archivo de estilos
 
 const DireccionForm = ({ onDireccionGuardada }) => {
   const [direccion, setDireccion] = useState('');

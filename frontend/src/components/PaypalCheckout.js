@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import '../styles/Checkout.scss';
 
 const PaypalCheckout = ({ amount, onSuccess }) => {
-  const paypalRef = useRef();  // Usamos una referencia para el contenedor del botón de PayPal
+  const paypalRef = useRef();  // Usar una referencia para el contenedor del botón de PayPal
 
   useEffect(() => {
     const loadPayPalScript = () => {
@@ -37,7 +37,7 @@ const PaypalCheckout = ({ amount, onSuccess }) => {
         onError: (err) => {
           console.error('PayPal error:', err);
         }
-      }).render(paypalRef.current);  // Renderizamos el botón en el elemento referenciado
+      }).render(paypalRef.current);  // Renderizar el botón en el elemento referenciado
     };
 
     loadPayPalScript();

@@ -9,7 +9,7 @@ const RutaProtegidaTest = () => {
     const fetchData = async () => {
       try {
         const response = await getRutaProtegidaTest();
-        setMessage(response.message);  // Asegúrate que el campo sea `message` desde el backend
+        setMessage(response.message);  // Asegurarse que el campo sea `message` desde el backend
       } catch (error) {
         setError('No tienes acceso a esta ruta protegida.');
       }

@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 
-# Define la contraseña que quieres hashear
+# Define la contraseña que se quiere hashear
 password = '2163'
 
 # Genera el hash de la contraseña
