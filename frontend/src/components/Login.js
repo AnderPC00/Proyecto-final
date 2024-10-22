@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import '../styles/Login.scss';
 
 const Login = () => {
-    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');  // Cambiado a email
     const [password, setPassword] = useState('');
     const [errorMessage, setErrorMessage] = useState('');  
     const { login } = useContext(AuthContext);  
@@ -14,14 +14,14 @@ const Login = () => {
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        axios.post('http://localhost:5000/api/login', { username, password })
+        axios.post('http://localhost:5000/api/login', { email, password })  // Cambiado a email
             .then(response => {
                 login(response.data);  
                 navigate('/carrito');  
             })
             .catch(error => {
                 if (error.response && error.response.status === 401) {
-                    setErrorMessage('Usuario o contraseña incorrectos');
+                    setErrorMessage('Correo o contraseña incorrectos');  // Cambiado a correo
                 } else {
                     setErrorMessage('Ocurrió un error, por favor intente de nuevo');
                 }
@@ -36,10 +36,10 @@ const Login = () => {
                 {errorMessage && <p className="error-message">{errorMessage}</p>}
                 <form className="login-form" onSubmit={handleSubmit}>
                     <input
-                        type="text"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        placeholder="Nombre de usuario"
+                        type="email"  // Cambiado a email
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Correo electrónico"  // Cambiado a correo electrónico
                         required
                     />
                     <input

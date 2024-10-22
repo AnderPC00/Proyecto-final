@@ -4,6 +4,7 @@ from flask_cors import CORS
 from flask_session import Session
 from werkzeug.security import generate_password_hash, check_password_hash
 import mysql.connector
+import re
 
 app = Flask(__name__)
 
@@ -97,6 +98,21 @@ def cargar_carrito_usuario(user_id):
         if conn:
             conn.close()
 
+# Función para validar correo electrónico
+def es_correo_valido(correo):
+    regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+    return re.match(regex, correo)
+
+# Función para validar contraseñas seguras
+def es_contrasena_segura(contrasena):
+    if len(contrasena) < 8:
+        return False
+    if not any(char.isdigit() for char in contrasena):
+        return False
+    if not any(char.isalpha() for char in contrasena):
+        return False
+    return True
+
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -146,17 +162,17 @@ def login():
 @app.route('/api/login', methods=['POST'])
 def api_login():
     data = request.json
-    username = data.get('username')
+    email = data.get('email')  # Cambiamos a email
     password = data.get('password')
 
     cnx = get_db_connection()
     cursor = cnx.cursor(dictionary=True)
     
-    # Verificar si el usuario existe en la base de datos
-    cursor.execute('SELECT id, password FROM usuarios WHERE username = %s', (username,))
+    # Verificar si el usuario existe en la base de datos usando el correo
+    cursor.execute('SELECT id, password_hash FROM usuarios WHERE email = %s', (email,))
     user = cursor.fetchone()
     
-    if user and check_password_hash(user['password'], password):
+    if user and check_password_hash(user['password_hash'], password):
         # Crear el objeto de usuario para Flask-Login
         usuario_obj = User(user['id'])
         login_user(usuario_obj)  # Iniciar la sesión del usuario
@@ -171,12 +187,16 @@ def api_login():
         session.modified = True  # Asegurar que Flask sepa que la sesión ha sido modificada
 
         # Cerrar la conexión a la base de datos
+        cursor.close()
         cnx.close()
         
         return jsonify({'message': 'Sesión iniciada correctamente'}), 200
     
+    # Cerrar la conexión a la base de datos en caso de error
+    cursor.close()
     cnx.close()
-    return jsonify({'error': 'Usuario o contraseña incorrectos'}), 401
+    
+    return jsonify({'error': 'Correo o contraseña incorrectos'}), 401
 
 @app.route('/logout')
 @login_required
@@ -207,12 +227,18 @@ def api_logout():
 def register():
     if request.method == 'POST':
         username = request.form['username']
+        email = request.form['email']  # Recibimos el campo de email
         password = request.form['password']
         hashed_password = generate_password_hash(password)
+        
         cnx = get_db_connection()
         cursor = cnx.cursor()
+        
         try:
-            cursor.execute('INSERT INTO usuarios (username, password) VALUES (%s, %s)', (username, hashed_password))
+            cursor.execute(
+                'INSERT INTO usuarios (username, email, password_hash) VALUES (%s, %s, %s)',
+                (username, email, hashed_password)
+            )
             cnx.commit()
             flash('Usuario registrado correctamente', 'success')
             return redirect(url_for('login'))
@@ -222,6 +248,7 @@ def register():
         finally:
             cursor.close()
             cnx.close()
+
     return render_template('register.html')
 
 @app.route('/productos')

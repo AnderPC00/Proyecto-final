@@ -5,23 +5,48 @@ import '../styles/Register.scss';
 
 const Register = () => {
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');  // Cambié "correo" por "email" para consistencia con el backend
   const [password, setPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');  // Para mensajes de error
   const navigate = useNavigate();
+
+  // Función para validar correo
+  const validarEmail = (email) => {
+    const regex = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
+    return regex.test(email);
+  };
+
+  // Función para validar contraseña segura
+  const validarContrasena = (password) => {
+    return password.length >= 8 && /\d/.test(password) && /[a-zA-Z]/.test(password);
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-  
+    
+    // Validaciones de correo y contraseña
+    if (!validarEmail(email)) {
+      setErrorMessage('Por favor, ingresa un correo válido');
+      return;
+    }
+
+    if (!validarContrasena(password)) {
+      setErrorMessage('La contraseña debe tener al menos 8 caracteres, un número y una letra');
+      return;
+    }
+
     const formData = new URLSearchParams();
     formData.append('username', username);
+    formData.append('email', email);  // Cambié "correo" a "email" para consistencia con el backend
     formData.append('password', password);
   
     axios.post('http://localhost:5000/register', formData)
       .then(response => {
-        // Si el registro es exitoso
         navigate('/login');  // Redirigir a la página de inicio de sesión
       })
       .catch(error => {
         console.error("Error al registrarse:", error);
+        setErrorMessage('Error en el registro, inténtalo nuevamente');
       });
   };
 
@@ -29,12 +54,20 @@ const Register = () => {
     <div className="register-page">
       <div className="register-container">
         <h1>Registrarse</h1>
+        {errorMessage && <p className="error-message">{errorMessage}</p>} {/* Mostrar mensaje de error */}
         <form className="register-form" onSubmit={handleSubmit}>
           <input
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="Nombre de usuario"
+            required
+          />
+          <input
+            type="email"  // Validación básica de correo en HTML
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Correo electrónico"
             required
           />
           <input
