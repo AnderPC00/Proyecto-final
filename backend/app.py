@@ -84,7 +84,7 @@ def check_session():
             "_fresh": False,
             "cart": session.get('cart', {})
         })
-    
+
 @app.route('/profile')
 def profile():
     return render_template('profile.html')
@@ -198,7 +198,7 @@ def productos():
     except mysql.connector.Error as err:
         flash(f"Error: {err}", 'danger')
         return redirect(url_for('home'))
-    
+
 @app.route('/api/productos', methods=['GET'])
 def api_productos():
     try:
@@ -355,15 +355,6 @@ def remove_from_cart(producto_id):
         flash('Producto eliminado del carrito', 'info')
     return redirect(url_for('carrito'))
 
-def cargar_carrito_usuario(user_id):
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute('SELECT producto_id, cantidad FROM user_cart WHERE user_id = %s', (user_id,))
-    carrito = {str(item['producto_id']): item['cantidad'] for item in cursor.fetchall()}
-    cursor.close()
-    conn.close()
-    return carrito
-
 @app.route('/api/remove_from_cart/<int:producto_id>', methods=['POST'])
 def api_remove_from_cart(producto_id):
     if 'cart' in session:
@@ -396,7 +387,7 @@ def update_cart(producto_id):
                 cart[str(producto_id)] = nueva_cantidad
                 session['cart'] = cart  # Asegura que la sesión se actualiza
 
-                # Si el usuario está autenticado, también se actualiz en la base de datos
+                # Si el usuario está autenticado, también se actualiza en la base de datos
                 if current_user.is_authenticated:
                     cnx = get_db_connection()
                     cursor = cnx.cursor()
@@ -433,54 +424,6 @@ def api_update_cart(producto_id):
         return jsonify({'message': 'Cantidad actualizada correctamente'}), 200
     else:
         return jsonify({'error': 'Producto no encontrado en el carrito'}), 404
-
-@app.route('/checkout', methods=['POST'])
-def checkout():
-    if 'cart' not in session or not session['cart']:
-        flash('El carrito está vacío. Añade productos antes de proceder al pago.', 'error')
-        return redirect(url_for('carrito'))
-
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-
-    # Calcular el total del carrito
-    total = 0
-    for producto_id, cantidad in session['cart'].items():
-        cursor.execute('SELECT precio, stock FROM productos WHERE id = %s', (producto_id,))
-        producto = cursor.fetchone()
-        if producto:
-            total += producto['precio'] * cantidad
-
-            # Verificar si hay suficiente stock antes de proceder
-            if producto['stock'] < cantidad:
-                flash(f'No hay suficiente stock para {producto["nombre"]}.', 'error')
-                return redirect(url_for('carrito'))
-
-            # Reducir el stock del producto
-            cursor.execute('UPDATE productos SET stock = stock - %s WHERE id = %s', (cantidad, producto_id))
-
-    # Si el usuario está autenticado, guardamos el pedido en la base de datos
-    if current_user.is_authenticated:
-        cursor.execute('INSERT INTO pedidos (user_id, total) VALUES (%s, %s)', (current_user.id, total))
-        pedido_id = cursor.lastrowid
-
-        # Guardar los detalles del pedido en la tabla "detalles_pedido"
-        for producto_id, cantidad in session['cart'].items():
-            cursor.execute('SELECT precio FROM productos WHERE id = %s', (producto_id,))
-            producto = cursor.fetchone()
-            if producto:
-                cursor.execute('INSERT INTO detalles_pedido (pedido_id, producto_id, cantidad, precio) VALUES (%s, %s, %s, %s)',
-                               (pedido_id, producto_id, cantidad, producto['precio']))
-    else:
-        # Para usuarios no autenticados, simplemente procesamos el pedido sin guardar en la base de datos
-        flash('Pago realizado con éxito. Gracias por tu compra.', 'success')
-
-    conn.commit()
-
-    # Vaciar el carrito después del pago
-    session['cart'] = {}
-
-    return redirect(url_for('home'))
 
 @app.route('/api/checkout', methods=['POST'])
 def api_checkout():

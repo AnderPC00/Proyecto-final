@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { checkSession } from '../api';
-import { useNavigate } from 'react-router-dom';  // Importar useNavigate para redirigir al checkout
+import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext'; // Importar AuthContext para el carrito
 
 const Carrito = () => {
-    const [productos, setProductos] = useState([]);
+    const { carrito, setCarrito } = useContext(AuthContext); // Obtener el carrito del contexto
     const [total, setTotal] = useState(0);
-    const navigate = useNavigate();  // Definir el hook para navegación
+    const navigate = useNavigate();
 
     useEffect(() => {
         const cargarCarrito = () => {
@@ -14,7 +15,7 @@ const Carrito = () => {
                 withCredentials: true  // Enviar cookies de sesión
             })
             .then(response => {
-                setProductos(response.data.productos);
+                setCarrito(response.data.productos);  // Actualizar el carrito en el contexto
                 recalcularTotal(response.data.productos);
                 console.log('Productos en el carrito:', response.data.productos);  // Log para depurar
             })
@@ -54,10 +55,10 @@ const Carrito = () => {
             { headers: { 'Content-Type': 'application/json' }, withCredentials: true }
         )
         .then(() => {
-            const productosActualizados = productos.map(p =>
+            const productosActualizados = carrito.map(p =>
                 p.id === productoId ? { ...p, cantidad: nuevaCantidad } : p
             );
-            setProductos(productosActualizados);
+            setCarrito(productosActualizados);
             recalcularTotal(productosActualizados);
             console.log('Cantidad actualizada:', productosActualizados);  // Log para depurar
         })
@@ -70,8 +71,8 @@ const Carrito = () => {
         console.log(`Eliminando producto con ID: ${productoId}`);  // Log para depurar
         axios.post(`http://localhost:5000/api/remove_from_cart/${productoId}`, {}, { withCredentials: true })
         .then(() => {
-            const productosActualizados = productos.filter(p => p.id !== productoId);
-            setProductos(productosActualizados);
+            const productosActualizados = carrito.filter(p => p.id !== productoId);
+            setCarrito(productosActualizados);
             recalcularTotal(productosActualizados);
             console.log('Producto eliminado:', productosActualizados);  // Log para depurar
         })
@@ -88,10 +89,10 @@ const Carrito = () => {
     return (
         <div>
             <h1>Carrito de Compras</h1>
-            {productos && productos.length > 0 ? (
+            {carrito && carrito.length > 0 ? (
                 <div>
                     <ul>
-                        {productos.map(producto => (
+                        {carrito.map(producto => (
                             <li key={producto.id}>
                                 <h2>{producto.nombre}</h2>
                                 <p>Precio: €{producto.precio}</p>
