@@ -14,13 +14,12 @@ body {
 .register-page {
   display: flex;
   justify-content: center;
-  align-items: flex-start; // Mantiene el formulario más arriba en la pantalla
+  align-items: flex-start;
   min-height: 100vh;
-  padding-top: 40px; // Reducido para acercar el formulario al navbar
+  padding-top: 50px;
 
   @media (max-width: 768px) {
-    padding-top: 20px; // Para pantallas más pequeñas, reduce el espacio superior
-    min-height: auto; // Elimina la restricción de altura para pantallas móviles
+    padding-top: 30px;
   }
 
   .register-container {
@@ -31,10 +30,6 @@ body {
     border-radius: $border-radius;
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
     text-align: center;
-
-    @media (max-width: 768px) {
-      max-width: 90%; // Aumenta el ancho en pantallas pequeñas para que no se vea tan pequeño
-    }
   }
 
   h1 {
@@ -50,7 +45,7 @@ body {
     input {
       width: 100%;
       max-width: 300px;
-      margin: 10px 0; // Reducido para menos espacio entre inputs
+      margin: 12px 0;
       padding: 14px;
       font-size: 16px;
       border: 1px solid $input-border-color;
@@ -84,8 +79,6 @@ body {
 
   .error-message {
     color: $error-color;
-    text-align: center;
-    font-size: 14px;
     margin-top: 10px;
   }
 }

@@ -229,6 +229,13 @@ def register():
         username = request.form['username']
         email = request.form['email']  # Recibimos el campo de email
         password = request.form['password']
+        confirm_password = request.form['confirm_password']  # Recibimos la confirmación de contraseña
+        
+        # Validación de que las contraseñas coincidan
+        if password != confirm_password:
+            flash('Las contraseñas no coinciden', 'danger')
+            return redirect(url_for('register'))
+        
         hashed_password = generate_password_hash(password)
         
         cnx = get_db_connection()

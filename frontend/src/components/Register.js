@@ -5,13 +5,14 @@ import '../styles/Register.scss';
 
 const Register = () => {
   const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');  // Cambié "correo" por "email" para consistencia con el backend
+  const [email, setEmail] = useState('');  // Cambiamos de 'correo' a 'email'
   const [password, setPassword] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');  // Para mensajes de error
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
 
   // Función para validar correo
-  const validarEmail = (email) => {
+  const validarCorreo = (email) => {
     const regex = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
     return regex.test(email);
   };
@@ -23,9 +24,9 @@ const Register = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    // Validaciones de correo y contraseña
-    if (!validarEmail(email)) {
+
+    // Validaciones de correo, contraseña y confirmación
+    if (!validarCorreo(email)) {
       setErrorMessage('Por favor, ingresa un correo válido');
       return;
     }
@@ -35,14 +36,22 @@ const Register = () => {
       return;
     }
 
+    if (password !== confirmPassword) {
+      setErrorMessage('Las contraseñas no coinciden');
+      return;
+    }
+
+    // Preparación de los datos para enviar
     const formData = new URLSearchParams();
     formData.append('username', username);
-    formData.append('email', email);  // Cambié "correo" a "email" para consistencia con el backend
+    formData.append('email', email);  // Cambiamos 'correo' a 'email'
     formData.append('password', password);
-  
+    formData.append('confirm_password', confirmPassword);
+
+    // Envío de la solicitud al backend
     axios.post('http://localhost:5000/register', formData)
       .then(response => {
-        navigate('/login');  // Redirigir a la página de inicio de sesión
+        navigate('/login');  // Redirigir a la página de inicio de sesión en caso de éxito
       })
       .catch(error => {
         console.error("Error al registrarse:", error);
@@ -54,7 +63,7 @@ const Register = () => {
     <div className="register-page">
       <div className="register-container">
         <h1>Registrarse</h1>
-        {errorMessage && <p className="error-message">{errorMessage}</p>} {/* Mostrar mensaje de error */}
+        {errorMessage && <p className="error-message">{errorMessage}</p>}
         <form className="register-form" onSubmit={handleSubmit}>
           <input
             type="text"
@@ -64,7 +73,7 @@ const Register = () => {
             required
           />
           <input
-            type="email"  // Validación básica de correo en HTML
+            type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Correo electrónico"
@@ -75,6 +84,13 @@ const Register = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Contraseña"
+            required
+          />
+          <input
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Confirmar contraseña"
             required
           />
           <button type="submit">Registrarse</button>
