@@ -1,0 +1,20 @@
+@media (max-width: 768px) {
+    .producto {
+        padding: 10px;
+        margin-bottom: 15px;
+    }
+
+    .navbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .navbar ul {
+        flex-direction: column;
+    }
+
+    .navbar li {
+        margin-left: 0;
+        margin-bottom: 10px;
+    }
+}

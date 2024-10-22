@@ -8,6 +8,9 @@ import Register from './components/Register';
 import Profile from './components/Profile';
 import { AuthProvider } from './context/AuthContext';
 import Checkout from './components/Checkout';
+import './styles/responsive.css';
+import './styles/App.css';
+
 
 function App() {
   const [searchQuery, setSearchQuery] = useState('');

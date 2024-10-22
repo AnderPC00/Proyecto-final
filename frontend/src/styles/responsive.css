@@ -1,0 +1,98 @@
+/* Media queries for responsive design */
+
+/* Small devices (phones, 600px and down) */
+@media only screen and (max-width: 600px) {
+    body {
+        font-size: 14px;
+    }
+    .navbar {
+        flex-direction: column;
+    }
+    .navbar ul {
+        flex-direction: column;
+    }
+}
+
+/* Medium devices (tablets, 600px to 768px) */
+@media only screen and (min-width: 601px) and (max-width: 768px) {
+    body {
+        font-size: 16px;
+    }
+    .navbar {
+        justify-content: space-between;
+    }
+}
+
+/* Large devices (desktops, 768px and up) */
+@media only screen and (min-width: 769px) {
+    body {
+        font-size: 18px;
+    }
+    .navbar {
+        justify-content: flex-start;
+    }
+}
+
+/* Transiciones suaves */
+button, .card, .navbar {
+    transition: all 0.3s ease;
+}
+
+/* Sombras */
+button, .card {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Sombras más pronunciadas en hover */
+button:hover, .card:hover {
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Bordes redondeados */
+button, .card, input, .navbar {
+    border-radius: 8px;
+}
+
+/* Cambiar el color de fondo de los botones al hacer hover */
+button:hover {
+    background-color: #007bff;
+    color: white;
+}
+
+/* Estilo de las tarjetas de productos */
+.card {
+    padding: 20px;
+    border: 1px solid #ddd;
+    background-color: #fff;
+    margin-bottom: 20px;
+    border-radius: 8px;
+}
+
+/* Estilo de los botones principales */
+button {
+    padding: 10px 20px;
+    background-color: #0069d9;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 8px;
+}
+
+/* Estilo de los inputs */
+input {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+}
+
+/* NavBar estilo */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #ddd;
+}

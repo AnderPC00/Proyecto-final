@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import '../styles/Productos.css';
+import '../styles/styles.css';
 
 const Productos = ({ searchQuery = '', resetSearch }) => {
     const [productos, setProductos] = useState([]);
@@ -55,11 +57,11 @@ const Productos = ({ searchQuery = '', resetSearch }) => {
                             <p>Precio: €{producto.precio}</p>
                             {producto.stock > 0 ? (
                                 <>
-                                    <p>Stock disponible: {producto.stock}</p>
-                                    <button onClick={() => handleAddToCart(producto.id)}>Añadir al carrito</button>
+                                    <p className="stock-disponible">Stock disponible: {producto.stock}</p> {/* Aquí siempre debe ser 'stock-disponible' */}
+                                    <button className="btn-carrito" onClick={() => handleAddToCart(producto.id)}>Añadir al carrito</button>
                                 </>
                             ) : (
-                                <p style={{ color: 'red' }}>Sin stock</p>
+                                <p className="sin-stock">Sin stock</p> /* Aquí siempre debe ser 'sin-stock' */
                             )}
                         </li>
                     ))}

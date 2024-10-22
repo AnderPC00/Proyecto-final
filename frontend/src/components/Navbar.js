@@ -4,13 +4,13 @@ import { AuthContext } from '../context/AuthContext';
 import '../styles/Navbar.css';
 
 const Navbar = ({ onSearch }) => {
-    const { usuario, logout } = useContext(AuthContext);
+    const { usuario, logout, carritoCount } = useContext(AuthContext); // Acceder al carritoCount
     const [searchQuery, setSearchQuery] = useState('');
 
     const handleSearch = (e) => {
         e.preventDefault();
         if (typeof onSearch === 'function') {
-            onSearch(searchQuery);  // Ejecutar la función de búsqueda si está definida
+            onSearch(searchQuery);
         } else {
             console.error("onSearch no está definida como función");
         }
@@ -43,6 +43,9 @@ const Navbar = ({ onSearch }) => {
                         <li className="nav-item">
                             <Link className="nav-link" to="/carrito">
                                 <i className="fas fa-shopping-cart"></i> Carrito
+                                {carritoCount > 0 && (
+                                    <span className="badge bg-primary ms-2">{carritoCount}</span>
+                                )}
                             </Link>
                         </li>
                     </ul>

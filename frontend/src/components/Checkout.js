@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';  // Importar useNavigate para la redirección
+import { useNavigate } from 'react-router-dom';
 
 const Checkout = () => {
-    const { usuario } = useContext(AuthContext); // Comprobar si está autenticado
+    const { usuario } = useContext(AuthContext);
     const [direcciones, setDirecciones] = useState([]);
-    const [usarDireccionGuardada, setUsarDireccionGuardada] = useState(true); // Para alternar entre usar dirección guardada o nueva
+    const [usarDireccionGuardada, setUsarDireccionGuardada] = useState(true);
     const [direccionSeleccionada, setDireccionSeleccionada] = useState('');
     const [nuevaDireccion, setNuevaDireccion] = useState({
         direccion: '',
@@ -14,13 +14,12 @@ const Checkout = () => {
         provincia: '',
         codigo_postal: '',
         pais: '',
-        telefono: ''  // Añadido el campo de teléfono
+        telefono: ''
     });
     const [metodoPago, setMetodoPago] = useState('');
-    const navigate = useNavigate();  // Inicializar useNavigate para redirigir
+    const navigate = useNavigate();
 
     useEffect(() => {
-        // Si está autenticado, obtener direcciones guardadas
         if (usuario) {
             axios.get('http://localhost:5000/api/obtener_direcciones', { withCredentials: true })
                 .then(response => {
@@ -34,10 +33,15 @@ const Checkout = () => {
     }, [usuario]);
 
     const handleCheckout = () => {
-        const direccionFinal = usarDireccionGuardada 
-            ? direcciones.find(dir => dir.direccion === direccionSeleccionada) || nuevaDireccion 
+        if (!metodoPago) {
+            alert('Por favor, seleccione un método de pago.');
+            return;
+        }
+    
+        const direccionFinal = usarDireccionGuardada
+            ? direcciones.find(dir => dir.direccion === direccionSeleccionada) || nuevaDireccion
             : nuevaDireccion;
-
+    
         const payload = {
             direccion: {
                 direccion: direccionFinal.direccion,
@@ -49,20 +53,17 @@ const Checkout = () => {
             telefono: nuevaDireccion.telefono || direccionFinal.telefono,
             metodo_pago: metodoPago
         };
-
-        console.log('Payload enviado:', payload);
     
         axios.post('http://localhost:5000/api/checkout', payload, { withCredentials: true })
             .then(response => {
                 alert('Pago realizado con éxito');
                 console.log('Pago exitoso', response.data);
-                // Redirigir a inicio después de la compra
-                navigate('/');
+                navigate('/');  // Redirigir al inicio después de la compra
             })
             .catch(error => {
                 console.error('Error al proceder al pago:', error);
             });
-    };    
+    };
 
     return (
         <div>
@@ -91,7 +92,6 @@ const Checkout = () => {
                         ))}
                     </select>
 
-                    {/* Mostrar la dirección seleccionada */}
                     {direccionSeleccionada && (
                         <p>
                             Dirección seleccionada: {direccionSeleccionada}
@@ -100,7 +100,6 @@ const Checkout = () => {
                 </div>
             )}
 
-            {/* Mostrar campos de nueva dirección si se selecciona "Usar nueva dirección" */}
             {!usarDireccionGuardada && (
                 <div>
                     <h2>Nueva Dirección</h2>

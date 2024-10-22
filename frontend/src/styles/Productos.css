@@ -1,0 +1,47 @@
+.producto {
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.producto h2 {
+    margin-bottom: 10px;
+}
+
+.producto p {
+    margin-bottom: 5px;
+}
+
+.producto .btn {
+    margin-top: 10px;
+}
+
+.btn-carrito {
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.btn-carrito:hover {
+    background-color: #0056b3;
+}
+
+.stock-disponible {
+    color: green;
+    font-weight: bold;
+}
+
+.sin-stock {
+    color: red;
+    font-weight: bold;
+}
+
+.search-bar {
+    margin-bottom: 20px;
+}

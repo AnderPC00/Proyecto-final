@@ -425,23 +425,22 @@ def api_update_cart(producto_id):
     else:
         return jsonify({'error': 'Producto no encontrado en el carrito'}), 404
 
+from flask import jsonify
+
 @app.route('/api/checkout', methods=['POST'])
 def api_checkout():
     data = request.get_json()
-    direccion = data.get('direccion', {}).get('direccion', '')  
-    telefono = data.get('telefono', '')  
+    direccion = data.get('direccion', {}).get('direccion', '')
+    telefono = data.get('telefono', '')
     ciudad = data.get('direccion', {}).get('ciudad', '')
     provincia = data.get('direccion', {}).get('provincia', '')
     codigo_postal = data.get('direccion', {}).get('codigo_postal', '')
     pais = data.get('direccion', {}).get('pais', '')
     metodo_pago = data.get('metodo_pago', '')
 
-    print('Datos recibidos:', data)  # Para depurar qué datos están llegando
-
     if not direccion or not telefono or not metodo_pago:
         return jsonify({'error': 'Falta información de dirección, teléfono o método de pago'}), 400
 
-    # Obtener carrito de la sesión
     if 'cart' not in session or not session['cart']:
         return jsonify({'message': 'El carrito está vacío'}), 400
 
@@ -460,57 +459,38 @@ def api_checkout():
                 return jsonify({'message': f"No hay suficiente stock para {producto['nombre']}."}), 400
             total += producto['precio'] * cantidad
 
-    # Verificar si el usuario está autenticado
+    # Manejo de usuarios autenticados
     if current_user.is_authenticated:
-        print('Usuario autenticado:', current_user.id)  # Depuración
-
-        # Verificar si la dirección ya existe
         cursor.execute('SELECT id FROM direcciones WHERE user_id = %s AND direccion = %s AND telefono = %s',
                        (current_user.id, direccion, telefono))
         direccion_existente = cursor.fetchone()
 
         if not direccion_existente:
-            # Insertar nueva dirección
-            print(f'Insertando dirección para el usuario {current_user.id}: {direccion}, {telefono}')
             cursor.execute('INSERT INTO direcciones (user_id, direccion, telefono, ciudad, provincia, codigo_postal, pais) VALUES (%s, %s, %s, %s, %s, %s, %s)',
                            (current_user.id, direccion, telefono, ciudad, provincia, codigo_postal, pais))
             direccion_id = cursor.lastrowid
         else:
             direccion_id = direccion_existente['id']
 
-        # Insertar pedido
         cursor.execute('INSERT INTO pedidos (user_id, total, direccion_id, metodo_pago) VALUES (%s, %s, %s, %s)',
                        (current_user.id, total, direccion_id, metodo_pago))
         pedido_id = cursor.lastrowid
 
-        # Insertar detalles del pedido
-        for producto_id, cantidad in cart.items():
-            cursor.execute('INSERT INTO detalles_pedido (pedido_id, producto_id, cantidad, precio) VALUES (%s, %s, %s, %s)',
-                           (pedido_id, producto_id, cantidad, producto['precio']))
-
+    # Manejo de usuarios no autenticados
     else:
-        # Lógica para usuarios no autenticados
-        print('Usuario no autenticado, guardando dirección temporal.')
-        direccion_temporal = data.get('direccion', {}).get('direccion', '')  
-        telefono_temporal = data.get('telefono', '')
-
-        if not direccion_temporal or not telefono_temporal:
-            return jsonify({'error': 'Falta información de dirección o teléfono para usuarios no autenticados'}), 400
-
-        # Insertar pedido para usuario no autenticado
         cursor.execute('INSERT INTO pedidos (total, direccion_temporal, telefono_temporal, metodo_pago) VALUES (%s, %s, %s, %s)',
-                       (total, direccion_temporal, telefono_temporal, metodo_pago))
+                       (total, direccion, telefono, metodo_pago))
         pedido_id = cursor.lastrowid
 
-        for producto_id, cantidad in cart.items():
-            cursor.execute('INSERT INTO detalles_pedido (pedido_id, producto_id, cantidad, precio) VALUES (%s, %s, %s, %s)',
-                           (pedido_id, producto_id, cantidad, producto['precio']))
+    # Insertar detalles del pedido
+    for producto_id, cantidad in cart.items():
+        cursor.execute('INSERT INTO detalles_pedido (pedido_id, producto_id, cantidad, precio) VALUES (%s, %s, %s, %s)',
+                       (pedido_id, producto_id, cantidad, producto['precio']))
 
-    # Actualizar el stock de los productos UNA SOLA VEZ
+    # Actualizar el stock de los productos
     for producto_id, cantidad in cart.items():
         cursor.execute('UPDATE productos SET stock = stock - %s WHERE id = %s', (cantidad, producto_id))
 
-    # Finalizar la transacción y cerrar la conexión
     cnx.commit()
     cnx.close()
 

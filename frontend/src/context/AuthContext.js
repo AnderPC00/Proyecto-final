@@ -14,9 +14,15 @@ export const AuthProvider = ({ children }) => {
         return carritoGuardado ? JSON.parse(carritoGuardado) : [];
     });
 
+    const [carritoCount, setCarritoCount] = useState(0); // Nuevo estado para la cantidad de productos en el carrito
+
     // Sincronizar el carrito con sessionStorage
     useEffect(() => {
         sessionStorage.setItem('cart', JSON.stringify(carrito));
+
+        // Recalcular la cantidad total de productos en el carrito
+        const count = carrito.reduce((total, item) => total + item.cantidad, 0);
+        setCarritoCount(count);
     }, [carrito]);
 
     const login = (usuarioData) => {
@@ -49,7 +55,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ usuario, login, logout, carrito, setCarrito }}>
+        <AuthContext.Provider value={{ usuario, login, logout, carrito, setCarrito, carritoCount }}>
             {children}
         </AuthContext.Provider>
     );
