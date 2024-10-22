@@ -35,7 +35,7 @@ const Carrito = () => {
             .catch(error => {
                 console.error('Error al verificar la sesión:', error);
             });
-    }, []);
+    }, [setCarrito]);
 
     const recalcularTotal = (productos) => {
         const nuevoTotal = productos.reduce((acc, producto) => acc + producto.precio * producto.cantidad, 0);

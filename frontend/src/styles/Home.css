@@ -1,0 +1,21 @@
+.productos-destacados {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+  }
+  
+  .producto {
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    text-align: center;
+  }
+  
+  .producto h3 {
+    margin-bottom: 10px;
+  }
+  
+  .producto button {
+    margin-top: 10px;
+  }  

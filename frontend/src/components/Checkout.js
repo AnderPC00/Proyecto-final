@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { showSuccessMessage, showErrorMessage } from '../utils/alertas';  // Importamos las alertas
 
 const Checkout = () => {
     const { usuario, setCarrito, setCarritoCount } = useContext(AuthContext);  // Añadido setCarrito y setCarritoCount
@@ -26,14 +27,14 @@ const Checkout = () => {
                     setDirecciones(response.data);
                 })
                 .catch(error => {
-                    console.error('Error al cargar las direcciones:', error);
+                    showErrorMessage('Error al cargar las direcciones');
                 });
         }
     }, [usuario]);
 
     const handleCheckout = () => {
         if (!metodoPago) {
-            alert('Por favor, seleccione un método de pago.');
+            showErrorMessage('Por favor, seleccione un método de pago.');
             return;
         }
     
@@ -55,15 +56,14 @@ const Checkout = () => {
     
         axios.post('http://localhost:5000/api/checkout', payload, { withCredentials: true })
             .then(response => {
-                alert('Pago realizado con éxito');
-                console.log('Pago exitoso', response.data);
+                showSuccessMessage('Pago realizado con éxito');
                 // Vaciar el carrito después del pago
                 setCarrito([]);
                 setCarritoCount(0);  // Restablecer el contador del carrito a cero
                 navigate('/');  // Redirigir al inicio después de la compra
             })
             .catch(error => {
-                console.error('Error al proceder al pago:', error);
+                showErrorMessage('Error al proceder al pago');
             });
     };
 

@@ -42,3 +42,10 @@
     padding: 0.5rem;
     border-radius: 50%;
 }
+
+@media (min-width: 768px) {
+
+    .navbar-collapse {
+        display: flex !important;
+    }
+} 

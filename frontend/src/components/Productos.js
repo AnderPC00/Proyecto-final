@@ -3,11 +3,12 @@ import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import '../styles/Productos.css';
 import '../styles/styles.css';
+import { showSuccessMessage, showErrorMessage } from '../utils/alertas';
 
 const Productos = ({ searchQuery = '', resetSearch }) => {
     const [productos, setProductos] = useState([]);
     const [productosFiltrados, setProductosFiltrados] = useState([]);
-    const { carrito, setCarrito, carritoCount, setCarritoCount } = useContext(AuthContext);  // Añadido carritoCount y setCarritoCount
+    const { carrito, setCarrito, carritoCount, setCarritoCount } = useContext(AuthContext);
 
     // Cargar todos los productos al montar el componente
     useEffect(() => {
@@ -17,7 +18,7 @@ const Productos = ({ searchQuery = '', resetSearch }) => {
                 setProductosFiltrados(response.data); // Inicialmente mostrar todos
             })
             .catch(error => {
-                console.error('Error al cargar los productos:', error);
+                showErrorMessage('Error al cargar los productos');
             });
     }, []);
 
@@ -40,7 +41,7 @@ const Productos = ({ searchQuery = '', resetSearch }) => {
             withCredentials: true
         })
         .then(response => {
-            alert('Producto añadido al carrito');
+            showSuccessMessage('Producto añadido al carrito');
             // Actualizar el carrito globalmente en el contexto
             axios.get('http://localhost:5000/api/carrito', { withCredentials: true })
                 .then(response => {
@@ -49,11 +50,11 @@ const Productos = ({ searchQuery = '', resetSearch }) => {
                     setCarritoCount(count); // Actualizar la cantidad de productos en el carrito
                 })
                 .catch(error => {
-                    console.error('Error al actualizar el carrito:', error);
+                    showErrorMessage('Error al actualizar el carrito');
                 });
         })
         .catch(error => {
-            console.error('Error al añadir el producto al carrito:', error);
+            showErrorMessage('Error al añadir el producto al carrito');
         });
     };
 

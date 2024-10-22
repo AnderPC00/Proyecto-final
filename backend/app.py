@@ -23,14 +23,30 @@ login_manager.login_view = 'login'
 class User(UserMixin):
     def __init__(self, id):
         self.id = id
+        # Puedes agregar más atributos si es necesario, por ejemplo, username, email, etc.
+
+    def get_id(self):
+        return str(self.id)
+
+    @property
+    def is_authenticated(self):
+        # Devuelve True siempre que el ID del usuario esté presente
+        return self.id is not None
 
 @login_manager.user_loader
 def load_user(user_id):
-    user = User(user_id)
-    if user.is_authenticated:
-        session['cart'] = cargar_carrito_usuario(user_id)
-        session.modified = True
-    return user
+    cnx = get_db_connection()  # Asegúrate de que estás usando la función correcta para obtener la conexión a la base de datos
+    cursor = cnx.cursor(dictionary=True)
+    
+    # Consultar la base de datos para obtener la información del usuario
+    cursor.execute('SELECT * FROM usuarios WHERE id = %s', (user_id,))
+    user_data = cursor.fetchone()
+    cnx.close()
+
+    if user_data:
+        # Retornar el objeto User con los datos del usuario autenticado
+        return User(user_data['id'])
+    return None
 
 # Configuración de la conexión a la base de datos MySQL
 config = {
@@ -60,13 +76,26 @@ def guardar_carrito_usuario(user_id, carrito):
     conn.close()
 
 def cargar_carrito_usuario(user_id):
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute('SELECT producto_id, cantidad FROM user_cart WHERE user_id = %s', (user_id,))
-    carrito = {str(item['producto_id']): item['cantidad'] for item in cursor.fetchall()}
-    cursor.close()
-    conn.close()
-    return carrito
+    conn = None
+    try:
+        conn = get_db_connection()  # Conexión a la base de datos
+        cursor = conn.cursor(dictionary=True)
+
+        # Obtener los productos y cantidades del carrito del usuario
+        cursor.execute('SELECT producto_id, cantidad FROM user_cart WHERE user_id = %s', (user_id,))
+        carrito = {str(item['producto_id']): item['cantidad'] for item in cursor.fetchall()}
+
+        return carrito if carrito else {}
+
+    except Exception as e:
+        print(f"Error al cargar el carrito del usuario {user_id}: {e}")
+        return {}
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 @app.route('/')
 def home():
@@ -123,18 +152,28 @@ def api_login():
     cnx = get_db_connection()
     cursor = cnx.cursor(dictionary=True)
     
+    # Verificar si el usuario existe en la base de datos
     cursor.execute('SELECT id, password FROM usuarios WHERE username = %s', (username,))
     user = cursor.fetchone()
     
     if user and check_password_hash(user['password'], password):
-        login_user(User(user['id']))
-        
-        # Cargar el carrito del usuario desde la base de datos
-        session['cart'] = cargar_carrito_usuario(user['id'])
+        # Crear el objeto de usuario para Flask-Login
+        usuario_obj = User(user['id'])
+        login_user(usuario_obj)  # Iniciar la sesión del usuario
+
+        # Cargar el carrito del usuario después de iniciar sesión
+        carrito_usuario = cargar_carrito_usuario(user['id'])
+        if carrito_usuario:
+            session['cart'] = carrito_usuario  # Guardar el carrito del usuario en la sesión
+        else:
+            session['cart'] = []  # Si no hay carrito guardado, iniciar uno vacío
+
         session.modified = True  # Asegurar que Flask sepa que la sesión ha sido modificada
 
+        # Cerrar la conexión a la base de datos
         cnx.close()
-        return jsonify({'message': 'Sesión iniciada correctamente'})
+        
+        return jsonify({'message': 'Sesión iniciada correctamente'}), 200
     
     cnx.close()
     return jsonify({'error': 'Usuario o contraseña incorrectos'}), 401
@@ -211,6 +250,15 @@ def api_productos():
         return jsonify(productos)
     except mysql.connector.Error as err:
         return jsonify({'error': str(err)}), 500
+    
+@app.route('/api/productos_destacados', methods=['GET'])
+def obtener_productos_destacados():
+    cnx = get_db_connection()
+    cursor = cnx.cursor(dictionary=True)
+    cursor.execute('SELECT * FROM productos LIMIT 5') 
+    productos = cursor.fetchall()
+    cnx.close()
+    return jsonify(productos)
 
 @app.route('/add_to_cart/<int:producto_id>', methods=['POST'])
 def add_to_cart(producto_id):
@@ -438,9 +486,12 @@ def api_checkout():
     pais = data.get('direccion', {}).get('pais', '')
     metodo_pago = data.get('metodo_pago', '')
 
+    print('Datos recibidos:', data)
+
     if not direccion or not telefono or not metodo_pago:
         return jsonify({'error': 'Falta información de dirección, teléfono o método de pago'}), 400
 
+    # Obtener carrito de la sesión
     if 'cart' not in session or not session['cart']:
         return jsonify({'message': 'El carrito está vacío'}), 400
 
@@ -459,13 +510,17 @@ def api_checkout():
                 return jsonify({'message': f"No hay suficiente stock para {producto['nombre']}."}), 400
             total += producto['precio'] * cantidad
 
-    # Manejo de usuarios autenticados
+    # Verificar si el usuario está autenticado
     if current_user.is_authenticated:
+        print(f'Usuario autenticado: {current_user.is_authenticated}, ID: {current_user.id}')
+
+        # Verificar si la dirección ya existe
         cursor.execute('SELECT id FROM direcciones WHERE user_id = %s AND direccion = %s AND telefono = %s',
                        (current_user.id, direccion, telefono))
         direccion_existente = cursor.fetchone()
 
         if not direccion_existente:
+            print(f'Insertando dirección para el usuario {current_user.id}: {direccion}, {telefono}')
             cursor.execute('INSERT INTO direcciones (user_id, direccion, telefono, ciudad, provincia, codigo_postal, pais) VALUES (%s, %s, %s, %s, %s, %s, %s)',
                            (current_user.id, direccion, telefono, ciudad, provincia, codigo_postal, pais))
             direccion_id = cursor.lastrowid
@@ -476,25 +531,32 @@ def api_checkout():
                        (current_user.id, total, direccion_id, metodo_pago))
         pedido_id = cursor.lastrowid
 
-    # Manejo de usuarios no autenticados
+        for producto_id, cantidad in cart.items():
+            cursor.execute('INSERT INTO detalles_pedido (pedido_id, producto_id, cantidad, precio) VALUES (%s, %s, %s, %s)',
+                           (pedido_id, producto_id, cantidad, producto['precio']))
+
     else:
+        print('Usuario no autenticado, guardando dirección temporal.')
+        direccion_temporal = data.get('direccion', {}).get('direccion', '')
+        telefono_temporal = data.get('telefono', '')
+
+        if not direccion_temporal or not telefono_temporal:
+            return jsonify({'error': 'Falta información de dirección o teléfono para usuarios no autenticados'}), 400
+
         cursor.execute('INSERT INTO pedidos (total, direccion_temporal, telefono_temporal, metodo_pago) VALUES (%s, %s, %s, %s)',
-                       (total, direccion, telefono, metodo_pago))
+                       (total, direccion_temporal, telefono_temporal, metodo_pago))
         pedido_id = cursor.lastrowid
 
-    # Insertar detalles del pedido
-    for producto_id, cantidad in cart.items():
-        cursor.execute('INSERT INTO detalles_pedido (pedido_id, producto_id, cantidad, precio) VALUES (%s, %s, %s, %s)',
-                       (pedido_id, producto_id, cantidad, producto['precio']))
+        for producto_id, cantidad in cart.items():
+            cursor.execute('INSERT INTO detalles_pedido (pedido_id, producto_id, cantidad, precio) VALUES (%s, %s, %s, %s)',
+                           (pedido_id, producto_id, cantidad, producto['precio']))
 
-    # Actualizar el stock de los productos
     for producto_id, cantidad in cart.items():
         cursor.execute('UPDATE productos SET stock = stock - %s WHERE id = %s', (cantidad, producto_id))
 
     cnx.commit()
     cnx.close()
 
-    # Vaciar el carrito después del pago
     session.pop('cart', None)
 
     return jsonify({'message': 'Pago realizado con éxito', 'total': total}), 200

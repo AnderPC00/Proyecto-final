@@ -6,11 +6,11 @@ import Carrito from './components/Carrito';
 import Login from './components/Login';
 import Register from './components/Register';
 import Profile from './components/Profile';
-import { AuthProvider } from './context/AuthContext';
 import Checkout from './components/Checkout';
+import Home from './components/Home';
+import { AuthProvider } from './context/AuthContext';
 import './styles/responsive.css';
 import './styles/App.css';
-
 
 function App() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -29,7 +29,7 @@ function App() {
       <Router>
         <Navbar onSearch={handleSearch} />
         <Routes>
-          <Route path="/" element={<h1>Bienvenido a la Tienda APC</h1>} />
+          <Route path="/" element={<Home />} /> {/* Usar Home.js como página principal */}
           <Route 
             path="/productos" 
             element={<Productos searchQuery={searchQuery} onResetSearch={resetSearch} />} 
