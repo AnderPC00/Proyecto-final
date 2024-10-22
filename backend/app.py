@@ -733,43 +733,69 @@ def buscar_productos():
 @app.route('/api/guardar_direccion', methods=['POST'])
 @login_required
 def guardar_direccion():
+    print(f"Usuario autenticado: {current_user.is_authenticated}, ID: {current_user.id}")
+    
     data = request.get_json()
+    print("Datos recibidos:", data)
+
+    # Procesa la dirección
     direccion = data.get('direccion')
     ciudad = data.get('ciudad')
     provincia = data.get('provincia')
     codigo_postal = data.get('codigo_postal')
+    pais = data.get('pais')
+    telefono = data.get('telefono')
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        'INSERT INTO direcciones (user_id, direccion, ciudad, provincia, codigo_postal) VALUES (%s, %s, %s, %s, %s)',
-        (current_user.id, direccion, ciudad, provincia, codigo_postal)
-    )
-    conn.commit()
-    cursor.close()
-    conn.close()
+    # Verifica si los datos son correctos
+    if not all([direccion, ciudad, provincia, codigo_postal, pais, telefono]):
+        return jsonify({'error': 'Todos los campos son obligatorios'}), 400
 
-    return jsonify({'message': 'Dirección guardada con éxito'})
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Inserta la nueva dirección
+        cursor.execute(
+            'INSERT INTO direcciones (usuario_id, direccion, ciudad, provincia, codigo_postal, pais, telefono) '
+            'VALUES (%s, %s, %s, %s, %s, %s, %s)',
+            (current_user.id, direccion, ciudad, provincia, codigo_postal, pais, telefono)
+        )
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return jsonify({'message': 'Dirección guardada con éxito'}), 201
+
+    except Exception as e:
+        print(f"Error al guardar la dirección: {e}")
+        return jsonify({'error': f'Error al guardar la dirección: {str(e)}'}), 500
+
+@app.route('/ruta_protegida')
+@login_required
+def ruta_protegida():
+    return jsonify({'message': 'Usuario autenticado'})
 
 @app.route('/api/obtener_direcciones', methods=['GET'])
+@login_required
 def obtener_direcciones():
-    user_id = current_user.id if current_user.is_authenticated else None
+    try:
+        user_id = current_user.id
 
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
 
-    if user_id:
-        # Si el usuario está autenticado, buscar direcciones asociadas a su ID
+        # Buscar direcciones asociadas al usuario
         cursor.execute('SELECT direccion, ciudad, provincia, codigo_postal, pais, telefono FROM direcciones WHERE user_id = %s', (user_id,))
-    else:
-        # Si no está autenticado, devolvemos una lista vacía de direcciones
-        return jsonify([]), 200
+        direcciones = cursor.fetchall()
 
-    direcciones = cursor.fetchall()
-    cursor.close()
-    conn.close()
+        cursor.close()
+        conn.close()
 
-    return jsonify(direcciones), 200
+        return jsonify(direcciones), 200
+
+    except Exception as e:
+        return jsonify({'error': f'Error al obtener las direcciones: {str(e)}'}), 500
 
 @app.route('/api/procesar_pago', methods=['POST'])
 @login_required

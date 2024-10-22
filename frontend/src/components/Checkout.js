@@ -2,9 +2,9 @@ import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { showSuccessMessage, showErrorMessage } from '../utils/alertas'; // Importamos las alertas
+import { showSuccessMessage, showErrorMessage } from '../utils/alertas';
 import { PayPalButton } from 'react-paypal-button-v2';
-import '../styles/Checkout.scss'; 
+import '../styles/Checkout.scss';
 
 const Checkout = () => {
     const { usuario, setCarrito, setCarritoCount } = useContext(AuthContext);
@@ -20,21 +20,25 @@ const Checkout = () => {
         telefono: ''
     });
     const [metodoPago, setMetodoPago] = useState('');
-    const [totalCompra, setTotalCompra] = useState(0); // Añadido para calcular el total
+    const [totalCompra, setTotalCompra] = useState(0);
     const navigate = useNavigate();
 
     useEffect(() => {
         if (usuario) {
             axios.get('http://localhost:5000/api/obtener_direcciones', { withCredentials: true })
                 .then(response => {
-                    setDirecciones(response.data);
+                    if (Array.isArray(response.data)) {
+                        setDirecciones(response.data);
+                    } else {
+                        setDirecciones([]);
+                    }
                 })
                 .catch(error => {
                     showErrorMessage('Error al cargar las direcciones');
                 });
         }
 
-        // Obtener el total de la compra (esto dependerá de cómo manejes el carrito en el backend)
+        // Obtener el total de la compra
         axios.get('http://localhost:5000/api/carrito', { withCredentials: true })
             .then(response => {
                 const total = response.data.total;
@@ -46,13 +50,45 @@ const Checkout = () => {
 
     }, [usuario]);
 
+    const handleGuardarDireccion = () => {
+        if (!usuario) {
+            showErrorMessage('Debes iniciar sesión para guardar una dirección');
+            return;
+        }
+
+        const payload = {
+            direccion: nuevaDireccion.direccion,
+            ciudad: nuevaDireccion.ciudad,
+            provincia: nuevaDireccion.provincia,
+            codigo_postal: nuevaDireccion.codigo_postal,
+            pais: nuevaDireccion.pais,
+            telefono: nuevaDireccion.telefono,
+        };
+
+        axios.post('http://localhost:5000/api/guardar_direccion', payload, { withCredentials: true })
+            .then(response => {
+                showSuccessMessage('Dirección guardada con éxito');
+                setDirecciones([...direcciones, payload]); // Actualiza la lista de direcciones
+                setUsarDireccionGuardada(true); // Cambia de nuevo a usar dirección guardada
+            })
+            .catch(error => {
+                console.error('Error al guardar la dirección:', error);
+                showErrorMessage('Error al guardar la dirección');
+            });
+    };
+
     const handleCheckout = (paymentResult) => {
-        const direccionFinal = usarDireccionGuardada
+        const direccionFinal = usarDireccionGuardada && usuario
             ? direcciones.find(dir => dir.direccion === direccionSeleccionada) || nuevaDireccion
             : nuevaDireccion;
 
         if (!direccionFinal.direccion || !direccionFinal.ciudad || !direccionFinal.provincia || !direccionFinal.codigo_postal || !direccionFinal.pais) {
             showErrorMessage('Por favor, complete todos los campos de dirección.');
+            return;
+        }
+
+        if (!metodoPago) {
+            showErrorMessage('Por favor, seleccione un método de pago.');
             return;
         }
 
@@ -66,7 +102,7 @@ const Checkout = () => {
             },
             telefono: nuevaDireccion.telefono || direccionFinal.telefono,
             metodo_pago: metodoPago,
-            pago: paymentResult // Incluimos los detalles del pago de PayPal
+            pago: paymentResult
         };
 
         axios.post('http://localhost:5000/api/checkout', payload, { withCredentials: true })
@@ -82,47 +118,76 @@ const Checkout = () => {
     };
 
     return (
-        <div>
+        <div className="checkout-container">
             <h1>Proceso de Pago</h1>
 
-            <div className="direccion-selector">
-                <button 
-                    className={`btn btn-small ${usarDireccionGuardada ? 'btn-primary' : 'btn-outline-primary'}`} 
-                    onClick={() => setUsarDireccionGuardada(true)}
-                >
-                    Usar dirección guardada
-                </button>
-                <button 
-                    className={`btn btn-small ${!usarDireccionGuardada ? 'btn-primary' : 'btn-outline-primary'}`} 
-                    onClick={() => setUsarDireccionGuardada(false)}
-                >
-                    Usar nueva dirección
-                </button>
-            </div>
+            {/* Si hay sesión, permite elegir entre dirección guardada o nueva */}
+            {usuario ? (
+                <>
+                    <div className="direccion-selector">
+                        <button 
+                            className={`btn btn-small ${usarDireccionGuardada ? 'btn-primary' : 'btn-outline-primary'}`} 
+                            onClick={() => setUsarDireccionGuardada(true)}
+                        >
+                            Usar dirección guardada
+                        </button>
+                        <button 
+                            className={`btn btn-small ${!usarDireccionGuardada ? 'btn-primary' : 'btn-outline-primary'}`} 
+                            onClick={() => setUsarDireccionGuardada(false)}
+                        >
+                            Usar nueva dirección
+                        </button>
+                    </div>
 
-            {usarDireccionGuardada && usuario && direcciones.length > 0 ? (
-                <div>
-                    <h2>Seleccionar Dirección Guardada</h2>
-                    <select 
-                        className="form-select" 
-                        value={direccionSeleccionada} 
-                        onChange={(e) => setDireccionSeleccionada(e.target.value)}
-                    >
-                        <option value="">Seleccionar una dirección</option>
-                        {direcciones.map((direccion) => (
-                            <option key={direccion.id} value={direccion.direccion}>
-                                {`${direccion.direccion}, ${direccion.ciudad}, ${direccion.provincia}, ${direccion.codigo_postal}, ${direccion.pais}`}
-                            </option>
-                        ))}
-                    </select>
-                    {direccionSeleccionada && (
-                        <p>Dirección seleccionada: {direccionSeleccionada}</p>
+                    {usarDireccionGuardada && direcciones.length > 0 ? (
+                        <div>
+                            <h2>Seleccionar Dirección Guardada</h2>
+                            <select 
+                                className="form-select" 
+                                value={direccionSeleccionada} 
+                                onChange={(e) => setDireccionSeleccionada(e.target.value)}
+                            >
+                                <option value="">Seleccionar una dirección</option>
+                                {direcciones.map((direccion) => (
+                                    <option key={direccion.id} value={direccion.direccion}>
+                                        {`${direccion.direccion}, ${direccion.ciudad}, ${direccion.provincia}, ${direccion.codigo_postal}, ${direccion.pais}`}
+                                    </option>
+                                ))}
+                            </select>
+                            {direccionSeleccionada && (
+                                <p>Dirección seleccionada: {direccionSeleccionada}</p>
+                            )}
+                        </div>
+                    ) : (
+                        !usarDireccionGuardada && (
+                            <div className="direccion-form">
+                                <h2>Introducir Nueva Dirección</h2>
+                                <div className="form-group">
+                                    <input type="text" className="form-control" placeholder="Dirección" value={nuevaDireccion.direccion} onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, direccion: e.target.value })} />
+                                </div>
+                                <div className="form-group">
+                                    <input type="text" className="form-control" placeholder="Ciudad" value={nuevaDireccion.ciudad} onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, ciudad: e.target.value })} />
+                                </div>
+                                <div className="form-group">
+                                    <input type="text" className="form-control" placeholder="Provincia" value={nuevaDireccion.provincia} onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, provincia: e.target.value })} />
+                                </div>
+                                <div className="form-group">
+                                    <input type="text" className="form-control" placeholder="Código Postal" value={nuevaDireccion.codigo_postal} onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, codigo_postal: e.target.value })} />
+                                </div>
+                                <div className="form-group">
+                                    <input type="text" className="form-control" placeholder="País" value={nuevaDireccion.pais} onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, pais: e.target.value })} />
+                                </div>
+                                <div className="form-group">
+                                    <input type="text" className="form-control" placeholder="Teléfono" value={nuevaDireccion.telefono} onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, telefono: e.target.value })} />
+                                </div>
+                                <button className="btn btn-primary" onClick={handleGuardarDireccion}>Guardar Dirección</button> {/* Botón de guardar dirección */}
+                            </div>
+                        )
                     )}
-                </div>
+                </>
             ) : (
                 <div className="direccion-form">
                     <h2>Introducir Nueva Dirección</h2>
-                    
                     <div className="form-group">
                         <input type="text" className="form-control" placeholder="Dirección" value={nuevaDireccion.direccion} onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, direccion: e.target.value })} />
                     </div>
@@ -142,7 +207,6 @@ const Checkout = () => {
                         <input type="text" className="form-control" placeholder="Teléfono" value={nuevaDireccion.telefono} onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, telefono: e.target.value })} />
                     </div>
                 </div>
-
             )}
 
             <div className="metodo-pago">
