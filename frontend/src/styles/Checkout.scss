@@ -1,0 +1,188 @@
+.checkout-container {
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 30px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+  }
+  
+  h1 {
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 2.5rem;
+    font-weight: bold;
+  }
+  
+  .direccion-selector {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  
+    .btn {
+      padding: 5px 15px;
+      font-size: 0.9rem;
+      border-radius: 0.25rem;
+      border: 1px solid transparent;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+  
+    .btn-primary {
+      background-color: #007bff;
+      color: white;
+    }
+  
+    .btn-secondary {
+      background-color: #6c757d;
+      color: white;
+    }
+  
+    .btn:hover {
+      filter: brightness(0.9);
+    }
+  }
+  
+  .nueva-direccion {
+    margin-bottom: 40px;
+    text-align: center;
+  
+    h2 {
+      margin-bottom: 20px;
+      font-size: 1.8rem;
+      text-align: center;
+    }
+  
+    .form-control {
+      width: 100%; /* Ahora ocupa todo el ancho del cuadro */
+      margin-bottom: 20px;
+      padding: 15px;
+      font-size: 1.2rem;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      box-sizing: border-box; /* Asegura que el padding y border no desborden el campo */
+    }
+  }
+  
+  .metodo-pago {
+    text-align: center;
+  
+    h2 {
+      margin-bottom: 20px;
+      font-size: 1.8rem;
+    }
+  
+    .form-select {
+      width: 30%;
+      margin: 0 auto;
+      margin-bottom: 20px;
+      padding: 10px;
+      font-size: 1.2rem;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+  }
+  
+  .paypal-button {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+  
+    button {
+      transform: scale(1.5); /* Aumentar más los botones de PayPal */
+      margin: 10px 0;
+    }
+  }
+  
+  .confirmar-compra {
+    width: 100%;
+    padding: 15px;
+    font-size: 1.3rem;
+    background-color: #28a745;
+    border: none;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  
+    &:hover {
+      background-color: #218838;
+    }
+  }
+  
+  // Estilo para el formulario de dirección
+  .direccion-form {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.1);
+  }
+  
+  .direccion-form h2 {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  .form-group {
+    margin-bottom: 15px;
+  
+    .form-control {
+      width: 100%; /* Ahora ocupa todo el ancho del cuadro */
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ced4da;
+      font-size: 1rem;
+    }
+  }
+  
+  .form-group-full {
+    margin-bottom: 15px;
+  
+    .form-control {
+      width: 100%;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ced4da;
+      font-size: 1rem;
+    }
+  }
+  
+  .form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+  }
+  
+  @media (max-width: 768px) {
+    .direccion-selector {
+      flex-direction: column;
+  
+      .btn {
+        width: 100%;
+        margin-bottom: 15px;
+      }
+    }
+  
+    .paypal-button {
+      width: 100%;
+      justify-content: center;
+  
+      button {
+        width: 100%;
+      }
+    }
+  
+    .form-control,
+    .form-select {
+      width: 100%;
+    }
+  
+    .form-group {
+      flex-direction: column;
+  
+      .form-control {
+        width: 100%;
+        margin-bottom: 15px;
+      }
+    }
+  }  

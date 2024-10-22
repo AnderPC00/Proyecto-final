@@ -3,9 +3,11 @@ import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { showSuccessMessage, showErrorMessage } from '../utils/alertas'; // Importamos las alertas
+import { PayPalButton } from 'react-paypal-button-v2';
+import '../styles/Checkout.scss'; 
 
 const Checkout = () => {
-    const { usuario, setCarrito, setCarritoCount } = useContext(AuthContext); 
+    const { usuario, setCarrito, setCarritoCount } = useContext(AuthContext);
     const [direcciones, setDirecciones] = useState([]);
     const [usarDireccionGuardada, setUsarDireccionGuardada] = useState(true);
     const [direccionSeleccionada, setDireccionSeleccionada] = useState('');
@@ -18,6 +20,7 @@ const Checkout = () => {
         telefono: ''
     });
     const [metodoPago, setMetodoPago] = useState('');
+    const [totalCompra, setTotalCompra] = useState(0); // Añadido para calcular el total
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -30,14 +33,20 @@ const Checkout = () => {
                     showErrorMessage('Error al cargar las direcciones');
                 });
         }
+
+        // Obtener el total de la compra (esto dependerá de cómo manejes el carrito en el backend)
+        axios.get('http://localhost:5000/api/carrito', { withCredentials: true })
+            .then(response => {
+                const total = response.data.total;
+                setTotalCompra(total);
+            })
+            .catch(error => {
+                showErrorMessage('Error al obtener el total de la compra');
+            });
+
     }, [usuario]);
 
-    const handleCheckout = () => {
-        if (!metodoPago) {
-            showErrorMessage('Por favor, seleccione un método de pago.');
-            return;
-        }
-
+    const handleCheckout = (paymentResult) => {
         const direccionFinal = usarDireccionGuardada
             ? direcciones.find(dir => dir.direccion === direccionSeleccionada) || nuevaDireccion
             : nuevaDireccion;
@@ -56,15 +65,16 @@ const Checkout = () => {
                 pais: direccionFinal.pais
             },
             telefono: nuevaDireccion.telefono || direccionFinal.telefono,
-            metodo_pago: metodoPago
+            metodo_pago: metodoPago,
+            pago: paymentResult // Incluimos los detalles del pago de PayPal
         };
 
         axios.post('http://localhost:5000/api/checkout', payload, { withCredentials: true })
             .then(response => {
                 showSuccessMessage('Pago realizado con éxito');
                 setCarrito([]);
-                setCarritoCount(0); 
-                navigate('/'); 
+                setCarritoCount(0);
+                navigate('/');
             })
             .catch(error => {
                 showErrorMessage('Error al proceder al pago');
@@ -77,13 +87,13 @@ const Checkout = () => {
 
             <div className="direccion-selector">
                 <button 
-                    className={`btn ${usarDireccionGuardada ? 'btn-primary' : 'btn-secondary'}`} 
+                    className={`btn btn-small ${usarDireccionGuardada ? 'btn-primary' : 'btn-outline-primary'}`} 
                     onClick={() => setUsarDireccionGuardada(true)}
                 >
                     Usar dirección guardada
                 </button>
                 <button 
-                    className={`btn ${!usarDireccionGuardada ? 'btn-primary' : 'btn-secondary'}`} 
+                    className={`btn btn-small ${!usarDireccionGuardada ? 'btn-primary' : 'btn-outline-primary'}`} 
                     onClick={() => setUsarDireccionGuardada(false)}
                 >
                     Usar nueva dirección
@@ -110,15 +120,29 @@ const Checkout = () => {
                     )}
                 </div>
             ) : (
-                <div>
+                <div className="direccion-form">
                     <h2>Introducir Nueva Dirección</h2>
-                    <input type="text" className="form-control" placeholder="Dirección" value={nuevaDireccion.direccion} onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, direccion: e.target.value })} />
-                    <input type="text" className="form-control" placeholder="Ciudad" value={nuevaDireccion.ciudad} onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, ciudad: e.target.value })} />
-                    <input type="text" className="form-control" placeholder="Provincia" value={nuevaDireccion.provincia} onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, provincia: e.target.value })} />
-                    <input type="text" className="form-control" placeholder="Código Postal" value={nuevaDireccion.codigo_postal} onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, codigo_postal: e.target.value })} />
-                    <input type="text" className="form-control" placeholder="País" value={nuevaDireccion.pais} onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, pais: e.target.value })} />
-                    <input type="text" className="form-control" placeholder="Teléfono" value={nuevaDireccion.telefono} onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, telefono: e.target.value })} />
+                    
+                    <div className="form-group">
+                        <input type="text" className="form-control" placeholder="Dirección" value={nuevaDireccion.direccion} onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, direccion: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                        <input type="text" className="form-control" placeholder="Ciudad" value={nuevaDireccion.ciudad} onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, ciudad: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                        <input type="text" className="form-control" placeholder="Provincia" value={nuevaDireccion.provincia} onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, provincia: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                        <input type="text" className="form-control" placeholder="Código Postal" value={nuevaDireccion.codigo_postal} onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, codigo_postal: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                        <input type="text" className="form-control" placeholder="País" value={nuevaDireccion.pais} onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, pais: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                        <input type="text" className="form-control" placeholder="Teléfono" value={nuevaDireccion.telefono} onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, telefono: e.target.value })} />
+                    </div>
                 </div>
+
             )}
 
             <div className="metodo-pago">
@@ -135,7 +159,24 @@ const Checkout = () => {
                 </select>
             </div>
 
-            <button className="btn btn-success mt-3" onClick={handleCheckout}>Confirmar Compra</button>
+            {metodoPago === 'paypal' && totalCompra > 0 && (
+                <div className="paypal-button">
+                    <PayPalButton
+                        amount={totalCompra}
+                        onSuccess={(details, data) => handleCheckout(details)}
+                        options={{
+                            clientId: 'Af2mqWVexMidu3fujDKo93hJHqwMCWPEbPn8WcvzI1wjZQ00yew6RWm_BEarruZDzukj_noKT_eMX3rM',
+                            currency: 'EUR'
+                        }}
+                    />
+                </div>
+            )}
+
+            {metodoPago === 'tarjeta' && (
+                <div className="d-flex justify-content-center">
+                    <button className="btn btn-success mt-3" onClick={() => handleCheckout()}>Confirmar Compra</button>
+                </div>
+            )}
         </div>
     );
 };
