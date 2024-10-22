@@ -16,7 +16,8 @@ const Productos = () => {
     const { setCarrito, setCarritoCount } = useContext(AuthContext);
     const [selectedColor, setSelectedColor] = useState({});
     const [selectedCapacidad, setSelectedCapacidad] = useState({});
-    const [stock, setStock] = useState({});  // Maneja el stock de la variante seleccionada
+    const [stock, setStock] = useState({});
+    const [stockTotal, setStockTotal] = useState({}); // Para verificar si alguna variante tiene stock
 
     // Cargar todos los productos al montar el componente
     useEffect(() => {
@@ -24,6 +25,7 @@ const Productos = () => {
             .then(response => {
                 setProductos(response.data);
                 setProductosFiltrados(response.data); // Mostrar todos los productos por defecto
+                calcularStockTotal(response.data); // Calcular si hay stock disponible para las variantes
             })
             .catch(error => {
                 showErrorMessage('Error al cargar los productos');
@@ -41,6 +43,19 @@ const Productos = () => {
             setProductosFiltrados(productos); // Mostrar todos si no hay filtro de búsqueda
         }
     }, [searchQuery, productos]);
+
+    // Calcular si el producto tiene stock en alguna variante
+    const calcularStockTotal = (productos) => {
+        const stockInfo = {};
+        productos.forEach(producto => {
+            const tieneStock = producto.variantes.some(vari => {
+                const stockDisponible = parseInt(vari.split('-')[2], 10);
+                return stockDisponible > 0;
+            });
+            stockInfo[producto.id] = tieneStock;
+        });
+        setStockTotal(stockInfo);
+    };
 
     // Manejar cambio de color
     const handleColorChange = (productoId, color) => {
@@ -146,7 +161,9 @@ const Productos = () => {
 
                         const primeraImagen = imagenes.length > 0 ? imagenes[0] : '';
 
-                        const stockClase = stock[producto.id] > 0 ? 'stock-disponible' : 'sin-stock';
+                        // Determinar si hay stock total para el producto
+                        const stockDisponible = stock[producto.id];
+                        const stockClase = stockDisponible > 0 ? 'stock-disponible' : (stockTotal[producto.id] ? 'stock-por-seleccionar' : 'sin-stock');
 
                         return (
                             <li key={`${producto.id}-${selectedColor[producto.id] || 'default'}-${selectedCapacidad[producto.id] || 'default'}`} className="producto-item">

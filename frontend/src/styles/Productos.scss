@@ -42,3 +42,18 @@ select {
   text-align: center;
   font-size: $fuente-media;
 }
+
+.stock-disponible {
+    color: green;
+    font-weight: bold;
+  }
+  
+  .sin-stock {
+    color: red;
+    font-weight: bold;
+  }
+  
+  .stock-por-seleccionar {
+    color: green; /* Verde si aún no se seleccionó ni color ni capacidad */
+    font-weight: bold;
+  }
