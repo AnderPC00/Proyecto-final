@@ -1,52 +1,52 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { checkSession } from '../api';
-import { useNavigate } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext'; // Importar AuthContext para el carrito
+import { useNavigate, Link } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
+import { showSuccessMessage, showErrorMessage } from '../utils/alertas'; // Importar las alertas
+import '../styles/Carrito.css'; // Importar estilos
 
 const Carrito = () => {
-    const { carrito, setCarrito } = useContext(AuthContext); // Obtener el carrito del contexto
+    const { carrito, setCarrito, carritoCount, setCarritoCount } = useContext(AuthContext); 
     const [total, setTotal] = useState(0);
     const navigate = useNavigate();
 
     useEffect(() => {
         const cargarCarrito = () => {
             axios.get('http://localhost:5000/api/carrito', {
-                withCredentials: true  // Enviar cookies de sesión
+                withCredentials: true
             })
             .then(response => {
-                setCarrito(response.data.productos);  // Actualizar el carrito en el contexto
+                setCarrito(response.data.productos);
                 recalcularTotal(response.data.productos);
-                console.log('Productos en el carrito:', response.data.productos);  // Log para depurar
+                setCarritoCount(response.data.productos.reduce((total, item) => total + item.cantidad, 0));
+                console.log('Productos en el carrito:', response.data.productos);
             })
             .catch(error => {
                 console.error('Error al cargar el carrito:', error);
             });
         };
 
-        // Verificar el estado de la sesión al cargar el carrito
         checkSession()
             .then(response => {
-                console.log('Estado de la sesión:', response.data);
                 if (response.data.cart) {
-                    cargarCarrito(); // Si hay un carrito en la sesión, cargar los productos
+                    cargarCarrito();
                 }
             })
             .catch(error => {
                 console.error('Error al verificar la sesión:', error);
             });
-    }, [setCarrito]);
+    }, [setCarrito, setCarritoCount]);
 
     const recalcularTotal = (productos) => {
         const nuevoTotal = productos.reduce((acc, producto) => acc + producto.precio * producto.cantidad, 0);
         setTotal(nuevoTotal);
     };
 
-    // Actualizar cantidad de productos en el carrito
     const handleUpdateCantidad = (productoId, nuevaCantidad, stockDisponible) => {
         if (nuevaCantidad < 1) return;
         if (nuevaCantidad > stockDisponible) {
-            alert('No puedes añadir más productos de los que hay en stock.');
+            showErrorMessage('No puedes añadir más productos de los que hay en stock.');
             return;
         }
 
@@ -60,54 +60,69 @@ const Carrito = () => {
             );
             setCarrito(productosActualizados);
             recalcularTotal(productosActualizados);
-            console.log('Cantidad actualizada:', productosActualizados);  // Log para depurar
+            showSuccessMessage('Cantidad actualizada correctamente');
         })
         .catch(error => {
+            showErrorMessage('Error al actualizar la cantidad.');
             console.error('Error al actualizar la cantidad:', error);
         });
     };
 
     const handleRemoveFromCart = (productoId) => {
-        console.log(`Eliminando producto con ID: ${productoId}`);  // Log para depurar
         axios.post(`http://localhost:5000/api/remove_from_cart/${productoId}`, {}, { withCredentials: true })
         .then(() => {
             const productosActualizados = carrito.filter(p => p.id !== productoId);
             setCarrito(productosActualizados);
             recalcularTotal(productosActualizados);
-            console.log('Producto eliminado:', productosActualizados);  // Log para depurar
+            setCarritoCount(productosActualizados.reduce((total, item) => total + item.cantidad, 0));
+            showSuccessMessage('Producto eliminado del carrito.');
         })
         .catch(error => {
+            showErrorMessage('Error al eliminar el producto.');
             console.error('Error al eliminar el producto:', error);
         });
     };
 
     const handleCheckout = () => {
-        // En vez de procesar el pago aquí, redirigir al usuario a la página de checkout
-        navigate('/checkout');  // Redirigir a la página de checkout
+        navigate('/checkout');
     };
 
     return (
-        <div>
+        <div className="carrito">
             <h1>Carrito de Compras</h1>
             {carrito && carrito.length > 0 ? (
                 <div>
-                    <ul>
+                    <ul className="lista-productos">
                         {carrito.map(producto => (
-                            <li key={producto.id}>
-                                <h2>{producto.nombre}</h2>
-                                <p>Precio: €{producto.precio}</p>
-                                <p>Cantidad: {producto.cantidad}</p>
-                                <button onClick={() => handleUpdateCantidad(producto.id, producto.cantidad - 1, producto.stock)}>-</button>
-                                <button onClick={() => handleUpdateCantidad(producto.id, producto.cantidad + 1, producto.stock)}>+</button>
-                                <button onClick={() => handleRemoveFromCart(producto.id)}>Eliminar</button>
+                            <li key={producto.id} className="producto-carrito">
+                                <img src={producto.imagen} alt={producto.nombre} className="imagen-producto" />
+                                <div>
+                                    <h3>{producto.nombre}</h3>
+                                    <p>Precio: €{producto.precio}</p>
+                                    <div className="cantidad-control">
+                                        <button onClick={() => handleUpdateCantidad(producto.id, producto.cantidad - 1, producto.stock)}>-</button>
+                                        <input 
+                                            type="number" 
+                                            value={producto.cantidad} 
+                                            onChange={(e) => handleUpdateCantidad(producto.id, parseInt(e.target.value), producto.stock)}
+                                            min="1"
+                                        />
+                                        <button onClick={() => handleUpdateCantidad(producto.id, producto.cantidad + 1, producto.stock)}>+</button>
+                                    </div>
+                                    <button className="btn btn-danger" onClick={() => handleRemoveFromCart(producto.id)}>Eliminar</button>
+                                </div>
                             </li>
                         ))}
                     </ul>
                     <h3>Total: €{total.toFixed(2)}</h3>
-                    <button onClick={handleCheckout}>Proceder al pago</button> {/* Redirige al checkout */}
+                    <button onClick={handleCheckout} className="btn btn-success">Proceder al pago</button>
                 </div>
             ) : (
-                <p>El carrito está vacío.</p>
+                <div className="carrito-vacio">
+                    <h2>Tu carrito está vacío</h2>
+                    <p>Explora nuestros productos y añade algo a tu carrito.</p>
+                    <Link to="/productos" className="btn btn-primary">Ver productos</Link>
+                </div>
             )}
         </div>
     );

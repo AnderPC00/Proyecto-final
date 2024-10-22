@@ -473,8 +473,6 @@ def api_update_cart(producto_id):
     else:
         return jsonify({'error': 'Producto no encontrado en el carrito'}), 404
 
-from flask import jsonify
-
 @app.route('/api/checkout', methods=['POST'])
 def api_checkout():
     data = request.get_json()
