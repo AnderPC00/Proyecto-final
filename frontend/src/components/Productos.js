@@ -1,17 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
+import { AuthContext } from '../context/AuthContext';
 import '../styles/Productos.css';
 import '../styles/styles.css';
 
 const Productos = ({ searchQuery = '', resetSearch }) => {
     const [productos, setProductos] = useState([]);
     const [productosFiltrados, setProductosFiltrados] = useState([]);
+    const { carrito, setCarrito, carritoCount, setCarritoCount } = useContext(AuthContext);  // Añadido carritoCount y setCarritoCount
 
     // Cargar todos los productos al montar el componente
     useEffect(() => {
         axios.get('http://localhost:5000/api/productos')
             .then(response => {
-                console.log('Productos recibidos del backend:', response.data);
                 setProductos(response.data);
                 setProductosFiltrados(response.data); // Inicialmente mostrar todos
             })
@@ -32,12 +33,29 @@ const Productos = ({ searchQuery = '', resetSearch }) => {
         }
     }, [searchQuery, productos]);
 
-    // Reiniciar la búsqueda cuando se carga la página de productos
-    useEffect(() => {
-        if (resetSearch) {
-            resetSearch();  // Resetear la búsqueda cuando se carga la página
-        }
-    }, [resetSearch]);
+    // Función para añadir un producto al carrito
+    const handleAddToCart = (productoId) => {
+        axios.post(`http://localhost:5000/api/add_to_cart/${productoId}`, { cantidad: 1 }, {
+            headers: { 'Content-Type': 'application/json' },
+            withCredentials: true
+        })
+        .then(response => {
+            alert('Producto añadido al carrito');
+            // Actualizar el carrito globalmente en el contexto
+            axios.get('http://localhost:5000/api/carrito', { withCredentials: true })
+                .then(response => {
+                    setCarrito(response.data.productos);
+                    const count = response.data.productos.reduce((total, item) => total + item.cantidad, 0);
+                    setCarritoCount(count); // Actualizar la cantidad de productos en el carrito
+                })
+                .catch(error => {
+                    console.error('Error al actualizar el carrito:', error);
+                });
+        })
+        .catch(error => {
+            console.error('Error al añadir el producto al carrito:', error);
+        });
+    };
 
     // Función para restablecer todos los productos
     const mostrarTodos = () => {
@@ -48,7 +66,7 @@ const Productos = ({ searchQuery = '', resetSearch }) => {
     return (
         <div>
             <h1>Productos Disponibles</h1>
-            <button onClick={mostrarTodos}>Mostrar todos los productos</button> {/* Botón para mostrar todos */}
+            <button onClick={mostrarTodos}>Mostrar todos los productos</button>
             {productosFiltrados.length > 0 ? (
                 <ul>
                     {productosFiltrados.map(producto => (
@@ -57,11 +75,11 @@ const Productos = ({ searchQuery = '', resetSearch }) => {
                             <p>Precio: €{producto.precio}</p>
                             {producto.stock > 0 ? (
                                 <>
-                                    <p className="stock-disponible">Stock disponible: {producto.stock}</p> {/* Aquí siempre debe ser 'stock-disponible' */}
+                                    <p className="stock-disponible">Stock disponible: {producto.stock}</p>
                                     <button className="btn-carrito" onClick={() => handleAddToCart(producto.id)}>Añadir al carrito</button>
                                 </>
                             ) : (
-                                <p className="sin-stock">Sin stock</p> /* Aquí siempre debe ser 'sin-stock' */
+                                <p className="sin-stock">Sin stock</p>
                             )}
                         </li>
                     ))}
@@ -71,22 +89,6 @@ const Productos = ({ searchQuery = '', resetSearch }) => {
             )}
         </div>
     );
-};
-
-const handleAddToCart = (productoId) => {
-    axios.post(`http://localhost:5000/api/add_to_cart/${productoId}`, { cantidad: 1 }, {
-        headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Credentials': true,
-        },
-        withCredentials: true
-    })
-    .then(() => {
-        alert('Producto añadido al carrito');
-    })
-    .catch(error => {
-        console.error('Error al añadir el producto al carrito:', error);
-    });
 };
 
 export default Productos;

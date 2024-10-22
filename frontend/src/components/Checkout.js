@@ -4,7 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const Checkout = () => {
-    const { usuario } = useContext(AuthContext);
+    const { usuario, setCarrito, setCarritoCount } = useContext(AuthContext);  // Añadido setCarrito y setCarritoCount
     const [direcciones, setDirecciones] = useState([]);
     const [usarDireccionGuardada, setUsarDireccionGuardada] = useState(true);
     const [direccionSeleccionada, setDireccionSeleccionada] = useState('');
@@ -24,7 +24,6 @@ const Checkout = () => {
             axios.get('http://localhost:5000/api/obtener_direcciones', { withCredentials: true })
                 .then(response => {
                     setDirecciones(response.data);
-                    console.log('Direcciones cargadas:', response.data);
                 })
                 .catch(error => {
                     console.error('Error al cargar las direcciones:', error);
@@ -58,6 +57,9 @@ const Checkout = () => {
             .then(response => {
                 alert('Pago realizado con éxito');
                 console.log('Pago exitoso', response.data);
+                // Vaciar el carrito después del pago
+                setCarrito([]);
+                setCarritoCount(0);  // Restablecer el contador del carrito a cero
                 navigate('/');  // Redirigir al inicio después de la compra
             })
             .catch(error => {
@@ -79,7 +81,6 @@ const Checkout = () => {
                 </button>
             </div>
 
-            {/* Mostrar direcciones guardadas si se selecciona "Usar ubicación guardada" */}
             {usarDireccionGuardada && usuario && direcciones.length > 0 && (
                 <div>
                     <h2>Dirección Guardada</h2>
@@ -91,11 +92,8 @@ const Checkout = () => {
                             </option>
                         ))}
                     </select>
-
                     {direccionSeleccionada && (
-                        <p>
-                            Dirección seleccionada: {direccionSeleccionada}
-                        </p>
+                        <p>Dirección seleccionada: {direccionSeleccionada}</p>
                     )}
                 </div>
             )}
@@ -103,42 +101,12 @@ const Checkout = () => {
             {!usarDireccionGuardada && (
                 <div>
                     <h2>Nueva Dirección</h2>
-                    <input
-                        type="text"
-                        placeholder="Dirección"
-                        value={nuevaDireccion.direccion}
-                        onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, direccion: e.target.value })}
-                    />
-                    <input
-                        type="text"
-                        placeholder="Ciudad"
-                        value={nuevaDireccion.ciudad}
-                        onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, ciudad: e.target.value })}
-                    />
-                    <input
-                        type="text"
-                        placeholder="Provincia"
-                        value={nuevaDireccion.provincia}
-                        onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, provincia: e.target.value })}
-                    />
-                    <input
-                        type="text"
-                        placeholder="Código Postal"
-                        value={nuevaDireccion.codigo_postal}
-                        onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, codigo_postal: e.target.value })}
-                    />
-                    <input
-                        type="text"
-                        placeholder="País"
-                        value={nuevaDireccion.pais}
-                        onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, pais: e.target.value })}
-                    />
-                    <input
-                        type="text"
-                        placeholder="Teléfono"
-                        value={nuevaDireccion.telefono}
-                        onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, telefono: e.target.value })}
-                    />
+                    <input type="text" placeholder="Dirección" value={nuevaDireccion.direccion} onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, direccion: e.target.value })} />
+                    <input type="text" placeholder="Ciudad" value={nuevaDireccion.ciudad} onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, ciudad: e.target.value })} />
+                    <input type="text" placeholder="Provincia" value={nuevaDireccion.provincia} onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, provincia: e.target.value })} />
+                    <input type="text" placeholder="Código Postal" value={nuevaDireccion.codigo_postal} onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, codigo_postal: e.target.value })} />
+                    <input type="text" placeholder="País" value={nuevaDireccion.pais} onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, pais: e.target.value })} />
+                    <input type="text" placeholder="Teléfono" value={nuevaDireccion.telefono} onChange={(e) => setNuevaDireccion({ ...nuevaDireccion, telefono: e.target.value })} />
                 </div>
             )}
 

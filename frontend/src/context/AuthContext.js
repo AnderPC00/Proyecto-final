@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
         return carritoGuardado ? JSON.parse(carritoGuardado) : [];
     });
 
-    const [carritoCount, setCarritoCount] = useState(0); // Nuevo estado para la cantidad de productos en el carrito
+    const [carritoCount, setCarritoCount] = useState(0);  // Nuevo estado para el contador del carrito
 
     // Sincronizar el carrito con sessionStorage
     useEffect(() => {
@@ -28,11 +28,12 @@ export const AuthProvider = ({ children }) => {
     const login = (usuarioData) => {
         setUsuario(usuarioData);
         localStorage.setItem('usuario', JSON.stringify(usuarioData));
-        // Recuperar el carrito guardado para el usuario si está disponible
         axios.get('http://localhost:5000/api/carrito', { withCredentials: true })
             .then((response) => {
                 if (response.data.cart) {
                     setCarrito(response.data.cart);
+                    const count = response.data.cart.reduce((total, item) => total + item.cantidad, 0);
+                    setCarritoCount(count);  // Actualizar la cantidad de productos en el carrito
                 }
             })
             .catch(error => {
@@ -45,9 +46,9 @@ export const AuthProvider = ({ children }) => {
             .then(() => {
                 setUsuario(null);
                 localStorage.removeItem('usuario');
-                setCarrito([]); // Vaciar el carrito en el frontend
-                sessionStorage.removeItem('cart'); // Limpiar el carrito guardado en sessionStorage
-                console.log('Cierre de sesión exitoso y carrito vaciado');
+                setCarrito([]);
+                setCarritoCount(0);  // Resetear el contador del carrito
+                sessionStorage.removeItem('cart');
             })
             .catch(error => {
                 console.error('Error al cerrar sesión:', error);
@@ -55,7 +56,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ usuario, login, logout, carrito, setCarrito, carritoCount }}>
+        <AuthContext.Provider value={{ usuario, login, logout, carrito, setCarrito, carritoCount, setCarritoCount }}>
             {children}
         </AuthContext.Provider>
     );
