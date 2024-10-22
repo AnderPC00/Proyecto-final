@@ -486,7 +486,7 @@ def checkout():
 def api_checkout():
     data = request.get_json()
     direccion = data.get('direccion')
-    telefono = data.get('telefono')  # Nuevo campo de teléfono
+    telefono = data.get('telefono')  # Campo de teléfono
     metodo_pago = data.get('metodo_pago')
 
     if not direccion or not telefono or not metodo_pago:
@@ -515,15 +515,45 @@ def api_checkout():
 
     # Si el usuario está autenticado, guardar el pedido y los detalles
     if current_user.is_authenticated:
-        cursor.execute('INSERT INTO pedidos (user_id, total, direccion, telefono, metodo_pago) VALUES (%s, %s, %s, %s, %s)', 
-                       (current_user.id, total, direccion, telefono, metodo_pago))
+        # Verificar si la dirección ya existe para el usuario autenticado
+        cursor.execute('SELECT id FROM direcciones WHERE user_id = %s AND direccion = %s AND telefono = %s',
+                       (current_user.id, direccion, telefono))
+        direccion_existente = cursor.fetchone()
+
+        if not direccion_existente:
+            # Guardar nueva dirección si no existe
+            cursor.execute('INSERT INTO direcciones (user_id, direccion, telefono) VALUES (%s, %s, %s)',
+                           (current_user.id, direccion, telefono))
+            direccion_id = cursor.lastrowid
+        else:
+            direccion_id = direccion_existente['id']
+
+        # Guardar el pedido con la dirección guardada
+        cursor.execute('INSERT INTO pedidos (user_id, total, direccion_id, metodo_pago) VALUES (%s, %s, %s, %s)',
+                       (current_user.id, total, direccion_id, metodo_pago))
         pedido_id = cursor.lastrowid
 
         # Guardar detalles del pedido
         for producto_id, cantidad in cart.items():
-            cursor.execute('INSERT INTO detalles_pedido (pedido_id, producto_id, cantidad) VALUES (%s, %s, %s)', 
-                           (pedido_id, producto_id, cantidad))
+            cursor.execute('INSERT INTO detalles_pedido (pedido_id, producto_id, cantidad, precio) VALUES (%s, %s, %s, %s)',
+                           (pedido_id, producto_id, cantidad, producto['precio']))
     
+    else:
+        # Lógica para usuarios no autenticados: guardar pedido temporal sin dirección guardada
+        cursor.execute('INSERT INTO pedidos (total, direccion_temporal, telefono_temporal, metodo_pago) VALUES (%s, %s, %s, %s)',
+                       (total, direccion, telefono, metodo_pago))
+        pedido_id = cursor.lastrowid
+
+        # Guardar detalles del pedido
+        for producto_id, cantidad in cart.items():
+            cursor.execute('INSERT INTO detalles_pedido (pedido_id, producto_id, cantidad, precio) VALUES (%s, %s, %s, %s)',
+                           (pedido_id, producto_id, cantidad, producto['precio']))
+
+    # Actualizar stock de productos
+    for producto_id, cantidad in cart.items():
+        cursor.execute('UPDATE productos SET stock = stock - %s WHERE id = %s', (cantidad, producto_id))
+
+    # Finalizar la transacción y cerrar la conexión
     cnx.commit()
     cnx.close()
 
@@ -627,6 +657,28 @@ def procesar_pago():
         return jsonify({'error': 'Método de pago no válido'}), 400
 
     return jsonify({'message': 'Pago procesado con éxito'})
+
+@app.route('/api/historial_pedidos', methods=['GET'])
+@login_required
+def historial_pedidos():
+    cnx = get_db_connection()
+    cursor = cnx.cursor(dictionary=True)
+
+    # Obtener los pedidos del usuario autenticado
+    cursor.execute('SELECT * FROM pedidos WHERE user_id = %s ORDER BY fecha DESC', (current_user.id,))
+    pedidos = cursor.fetchall()
+
+    # Obtener los detalles de cada pedido
+    for pedido in pedidos:
+        cursor.execute('SELECT dp.producto_id, p.nombre, dp.cantidad, dp.precio FROM detalles_pedido dp JOIN productos p ON dp.producto_id = p.id WHERE dp.pedido_id = %s', 
+                       (pedido['id'],))
+        pedido['detalles'] = cursor.fetchall()
+
+    cursor.close()
+    cnx.close()
+
+    return jsonify(pedidos)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
