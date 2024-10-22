@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';  // Importar useNavigate para la redirección
 
 const Checkout = () => {
     const { usuario } = useContext(AuthContext); // Comprobar si está autenticado
@@ -16,6 +17,7 @@ const Checkout = () => {
         telefono: ''  // Añadido el campo de teléfono
     });
     const [metodoPago, setMetodoPago] = useState('');
+    const navigate = useNavigate();  // Inicializar useNavigate para redirigir
 
     useEffect(() => {
         // Si está autenticado, obtener direcciones guardadas
@@ -32,22 +34,35 @@ const Checkout = () => {
     }, [usuario]);
 
     const handleCheckout = () => {
-        const direccionFinal = usarDireccionGuardada ? direccionSeleccionada : nuevaDireccion;
+        const direccionFinal = usarDireccionGuardada 
+            ? direcciones.find(dir => dir.direccion === direccionSeleccionada) || nuevaDireccion 
+            : nuevaDireccion;
+
         const payload = {
-            direccion: direccionFinal,
-            telefono: nuevaDireccion.telefono,  // Si es una nueva dirección, incluir el teléfono
+            direccion: {
+                direccion: direccionFinal.direccion,
+                ciudad: direccionFinal.ciudad,
+                provincia: direccionFinal.provincia,
+                codigo_postal: direccionFinal.codigo_postal,
+                pais: direccionFinal.pais
+            },
+            telefono: nuevaDireccion.telefono || direccionFinal.telefono,
             metodo_pago: metodoPago
         };
 
+        console.log('Payload enviado:', payload);
+    
         axios.post('http://localhost:5000/api/checkout', payload, { withCredentials: true })
             .then(response => {
                 alert('Pago realizado con éxito');
                 console.log('Pago exitoso', response.data);
+                // Redirigir a inicio después de la compra
+                navigate('/');
             })
             .catch(error => {
                 console.error('Error al proceder al pago:', error);
             });
-    };
+    };    
 
     return (
         <div>
