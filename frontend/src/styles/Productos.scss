@@ -1,0 +1,44 @@
+@import 'variables';
+
+// Disposición de lista de productos
+.productos-lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
+}
+
+// Estilos del producto
+.producto-item {
+  border: 1px solid $color-borde;
+  padding: $padding-medio;
+  border-radius: $radio-borde-grande;
+  width: 260px;
+  text-align: center;
+  background-color: white;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+
+  &:hover {
+    transform: translateY(-10px);
+  }
+}
+
+// Imagen del producto
+.producto-imagen {
+  max-width: 100%;
+  object-fit: contain;
+  margin-bottom: $padding-pequeno;
+  border-radius: $borde-redondeado-grande;
+}
+
+// Selectores de color y capacidad
+select {
+  width: 100%;
+  padding: $padding-pequeno;
+  margin-bottom: $padding-pequeno;
+  border-radius: $radio-borde;
+  border: 1px solid $color-borde;
+  text-align: center;
+  font-size: $fuente-media;
+}

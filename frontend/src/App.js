@@ -9,8 +9,9 @@ import Profile from './components/Profile';
 import Checkout from './components/Checkout';
 import Home from './components/Home';
 import { AuthProvider } from './context/AuthContext';
-import './styles/responsive.css';
-import './styles/App.css';
+import ProductoDetalle from './components/ProductoDetalle';
+import './styles/responsive.scss';
+import './styles/App.scss';
 
 function App() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -39,6 +40,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/producto/:id" element={<ProductoDetalle />} /> {/* Ruta para el detalle del producto */}
         </Routes>
       </Router>
     </AuthProvider>

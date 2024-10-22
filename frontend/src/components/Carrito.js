@@ -4,7 +4,7 @@ import { checkSession } from '../api';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { showSuccessMessage, showErrorMessage } from '../utils/alertas'; 
-import '../styles/Carrito.css'; 
+import '../styles/Carrito.scss'; 
 
 const Carrito = () => {
     const { carrito, setCarrito, setCarritoCount } = useContext(AuthContext);

@@ -289,12 +289,34 @@ def api_productos():
     
 @app.route('/api/productos_destacados', methods=['GET'])
 def obtener_productos_destacados():
-    cnx = get_db_connection()
-    cursor = cnx.cursor(dictionary=True)
-    cursor.execute('SELECT * FROM productos LIMIT 5') 
-    productos = cursor.fetchall()
-    cnx.close()
-    return jsonify(productos)
+    try:
+        cnx = get_db_connection()
+        cursor = cnx.cursor(dictionary=True)
+
+        # Consulta para obtener los productos destacados con imágenes
+        query = '''
+            SELECT p.id, p.nombre, p.precio, 
+                GROUP_CONCAT(DISTINCT pi.imagen SEPARATOR ',') AS imagenes
+            FROM productos p
+            LEFT JOIN producto_imagenes pi ON p.id = pi.producto_id
+            GROUP BY p.id
+            LIMIT 5
+        '''
+        cursor.execute(query)
+        productos = cursor.fetchall()
+
+        # Cerrar conexión a la base de datos
+        cursor.close()
+        cnx.close()
+
+        return jsonify(productos)
+
+    except mysql.connector.Error as err:
+        print(f"Error en la base de datos: {err}")
+        return jsonify({'error': str(err)}), 500
+    except Exception as e:
+        print(f"Error general: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/add_to_cart/<int:producto_id>', methods=['POST'])
 def add_to_cart(producto_id):
@@ -346,7 +368,6 @@ def api_add_to_cart(producto_id):
     cnx = get_db_connection()
     cursor = cnx.cursor(dictionary=True)
 
-    # Verificar el stock en la tabla producto_variantes
     query = """
         SELECT stock FROM producto_variantes
         WHERE producto_id = %s AND color = %s AND capacidad = %s
@@ -359,7 +380,6 @@ def api_add_to_cart(producto_id):
         cnx.close()
         return jsonify({'error': 'No hay stock disponible para la variante seleccionada'}), 400
 
-    # Si hay suficiente stock, continuar agregando al carrito
     if 'cart' not in session:
         session['cart'] = {}
 
@@ -373,15 +393,6 @@ def api_add_to_cart(producto_id):
 
     session['cart'] = cart
     session.modified = True  # Asegura que la sesión se actualice
-
-    # Actualizar el stock en la base de datos
-    nuevo_stock = variante['stock'] - cantidad
-    update_query = """
-        UPDATE producto_variantes SET stock = %s
-        WHERE producto_id = %s AND color = %s AND capacidad = %s
-    """
-    cursor.execute(update_query, (nuevo_stock, producto_id, color, capacidad))
-    cnx.commit()
 
     cursor.close()
     cnx.close()
@@ -616,12 +627,9 @@ def api_checkout():
     pais = data.get('direccion', {}).get('pais', '')
     metodo_pago = data.get('metodo_pago', '')
 
-    print('Datos recibidos:', data)
-
     if not direccion or not telefono or not metodo_pago:
         return jsonify({'error': 'Falta información de dirección, teléfono o método de pago'}), 400
 
-    # Obtener carrito de la sesión
     if 'cart' not in session or not session['cart']:
         return jsonify({'message': 'El carrito está vacío'}), 400
 
@@ -630,64 +638,56 @@ def api_checkout():
     cnx = get_db_connection()
     cursor = cnx.cursor(dictionary=True)
 
-    # Calcular el total del carrito y verificar stock
-    for producto_id, cantidad in cart.items():
-        cursor.execute('SELECT precio, stock FROM productos WHERE id = %s', (producto_id,))
+    for producto_key, producto_data in cart.items():
+        producto_id, color, capacidad = producto_key.split('-')
+        cantidad = producto_data['cantidad']
+
+        # Cambiado para obtener el precio de la tabla productos
+        cursor.execute('SELECT p.precio, v.stock FROM productos p JOIN producto_variantes v ON p.id = v.producto_id WHERE p.id = %s AND v.color = %s AND v.capacidad = %s', 
+                       (producto_id, color, capacidad))
         producto = cursor.fetchone()
+
         if producto:
             if producto['stock'] < cantidad:
                 cnx.close()
-                return jsonify({'message': f"No hay suficiente stock para {producto['nombre']}."}), 400
+                return jsonify({'message': f"No hay suficiente stock para el producto {producto['nombre']}."}), 400
             total += producto['precio'] * cantidad
 
-    # Verificar si el usuario está autenticado
     if current_user.is_authenticated:
-        print(f'Usuario autenticado: {current_user.is_authenticated}, ID: {current_user.id}')
-
-        # Verificar si la dirección ya existe
-        cursor.execute('SELECT id FROM direcciones WHERE user_id = %s AND direccion = %s AND telefono = %s',
+        cursor.execute('SELECT id FROM direcciones WHERE user_id = %s AND direccion = %s AND telefono = %s', 
                        (current_user.id, direccion, telefono))
         direccion_existente = cursor.fetchone()
 
         if not direccion_existente:
-            print(f'Insertando dirección para el usuario {current_user.id}: {direccion}, {telefono}')
-            cursor.execute('INSERT INTO direcciones (user_id, direccion, telefono, ciudad, provincia, codigo_postal, pais) VALUES (%s, %s, %s, %s, %s, %s, %s)',
+            cursor.execute('INSERT INTO direcciones (user_id, direccion, telefono, ciudad, provincia, codigo_postal, pais) VALUES (%s, %s, %s, %s, %s, %s, %s)', 
                            (current_user.id, direccion, telefono, ciudad, provincia, codigo_postal, pais))
             direccion_id = cursor.lastrowid
         else:
             direccion_id = direccion_existente['id']
 
-        cursor.execute('INSERT INTO pedidos (user_id, total, direccion_id, metodo_pago) VALUES (%s, %s, %s, %s)',
+        cursor.execute('INSERT INTO pedidos (user_id, total, direccion_id, metodo_pago) VALUES (%s, %s, %s, %s)', 
                        (current_user.id, total, direccion_id, metodo_pago))
         pedido_id = cursor.lastrowid
 
-        for producto_id, cantidad in cart.items():
-            cursor.execute('INSERT INTO detalles_pedido (pedido_id, producto_id, cantidad, precio) VALUES (%s, %s, %s, %s)',
-                           (pedido_id, producto_id, cantidad, producto['precio']))
-
     else:
-        print('Usuario no autenticado, guardando dirección temporal.')
-        direccion_temporal = data.get('direccion', {}).get('direccion', '')
-        telefono_temporal = data.get('telefono', '')
-
-        if not direccion_temporal or not telefono_temporal:
-            return jsonify({'error': 'Falta información de dirección o teléfono para usuarios no autenticados'}), 400
-
-        cursor.execute('INSERT INTO pedidos (total, direccion_temporal, telefono_temporal, metodo_pago) VALUES (%s, %s, %s, %s)',
-                       (total, direccion_temporal, telefono_temporal, metodo_pago))
+        cursor.execute('INSERT INTO pedidos (total, direccion_temporal, telefono_temporal, metodo_pago) VALUES (%s, %s, %s, %s)', 
+                       (total, direccion, telefono, metodo_pago))
         pedido_id = cursor.lastrowid
 
-        for producto_id, cantidad in cart.items():
-            cursor.execute('INSERT INTO detalles_pedido (pedido_id, producto_id, cantidad, precio) VALUES (%s, %s, %s, %s)',
-                           (pedido_id, producto_id, cantidad, producto['precio']))
+    for producto_key, producto_data in cart.items():
+        producto_id, color, capacidad = producto_key.split('-')
+        cantidad = producto_data['cantidad']
 
-    for producto_id, cantidad in cart.items():
-        cursor.execute('UPDATE productos SET stock = stock - %s WHERE id = %s', (cantidad, producto_id))
+        cursor.execute('INSERT INTO detalles_pedido (pedido_id, producto_id, cantidad, precio) VALUES (%s, %s, %s, %s)', 
+                       (pedido_id, producto_id, cantidad, producto['precio']))
+
+        cursor.execute('UPDATE producto_variantes SET stock = stock - %s WHERE producto_id = %s AND color = %s AND capacidad = %s', 
+                       (cantidad, producto_id, color, capacidad))
 
     cnx.commit()
     cnx.close()
 
-    session.pop('cart', None)
+    session.pop('cart', None)  # Limpia el carrito después de la compra
 
     return jsonify({'message': 'Pago realizado con éxito', 'total': total}), 200
 
@@ -808,6 +808,18 @@ def historial_pedidos():
 
     return jsonify(pedidos)
 
+@app.route('/api/producto/<int:id>', methods=['GET'])
+def obtener_producto(id):
+    cnx = get_db_connection()
+    cursor = cnx.cursor(dictionary=True)
+    cursor.execute('SELECT * FROM productos WHERE id = %s', (id,))
+    producto = cursor.fetchone()
+    cnx.close()
+
+    if producto:
+        return jsonify(producto)
+    else:
+        return jsonify({'error': 'Producto no encontrado'}), 404
 
 if __name__ == '__main__':
     app.run(debug=True)

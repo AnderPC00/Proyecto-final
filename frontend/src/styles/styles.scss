@@ -1,0 +1,62 @@
+@import 'variables';
+
+// Estilos generales
+body {
+  font-family: 'Arial', sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: $color-fondo;
+}
+
+h1, h2 {
+  text-align: center;
+}
+
+// Estilos de botones
+.btn-carrito {
+  padding: $padding-medio $padding-grande;
+  background-color: $color-primario;
+  color: white;
+  border: none;
+  border-radius: $radio-borde;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin-top: $padding-medio;
+  font-size: $fuente-media;
+
+  &:hover {
+    background-color: $color-primario-hover;
+  }
+}
+
+// Estilos de stock
+.stock-disponible {
+  color: green;
+  font-weight: bold;
+  margin-top: $padding-pequeno;
+}
+
+.sin-stock {
+  color: red;
+  font-weight: bold;
+  margin-top: $padding-pequeno;
+}
+
+// Ajustes de imagen del producto
+.producto img {
+  max-width: 100%;
+  object-fit: contain;
+  border-radius: $radio-borde-grande;
+}
+
+// Media Queries
+@media (max-width: 768px) {
+  h1 {
+    font-size: 24px;
+  }
+
+  .btn-carrito {
+    width: 100%;
+    padding: $padding-grande;
+  }
+}

@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import '../styles/Navbar.css';
+import '../styles/Navbar.scss';
 
 const Navbar = ({ onSearch }) => {
   const { usuario, logout, carritoCount } = useContext(AuthContext);

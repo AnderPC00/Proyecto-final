@@ -1,0 +1,39 @@
+// Colores
+$color-primario: #007bff;   // Azul principal
+$color-secundario: #6c757d; // Gris para botones secundarios
+$color-exito: #28a745;      // Verde para mensajes de éxito
+$color-error: #dc3545;      // Rojo para mensajes de error
+$color-borde: #ddd;         // Color de los bordes
+$color-texto: #000;         // Color del texto
+$color-fondo: #f8f9fa;      // Fondo claro
+$color-primario-hover: darken($color-primario, 10%);
+
+// Tipografía
+$fuente-base: 'Arial', sans-serif;
+$fuente-tamaño-base: 16px;
+$fuente-tamaño-grande: 18px;
+$fuente-tamaño-pequeño: 14px;
+$fuente-media: 16px;
+
+// Padding y Margen
+$padding-pequeno: 10px;
+$padding-medio: 15px;
+$padding-grande: 20px;
+$margin-pequeno: 10px;
+$margin-medio: 15px;
+$margin-grande: 20px;
+
+// Bordes y sombras
+$borde-redondeado: 5px;
+$borde-redondeado-grande: 10px;
+$sombra-ligera: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+// Ancho máximo
+$ancho-maximo: 1200px;
+
+// Medias Queries
+$breakpoint-movil: 768px;
+
+// Radios Bordes
+$radio-borde: 5px;
+$radio-borde-grande: 10px;

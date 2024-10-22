@@ -1,11 +1,16 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
-import '../styles/Productos.css';
-import '../styles/styles.css';
+import '../styles/Productos.scss';
+import '../styles/styles.scss';
 import { showSuccessMessage, showErrorMessage } from '../utils/alertas';
+import { useLocation } from 'react-router-dom';
 
-const Productos = ({ searchQuery = '' }) => {
+const Productos = () => {
+    const location = useLocation();
+    const searchParams = new URLSearchParams(location.search);
+    const searchQuery = searchParams.get('search') || ''; // Obtener el valor de 'search' de la URL
+
     const [productos, setProductos] = useState([]);
     const [productosFiltrados, setProductosFiltrados] = useState([]);
     const { setCarrito, setCarritoCount } = useContext(AuthContext);
@@ -27,10 +32,9 @@ const Productos = ({ searchQuery = '' }) => {
 
     // Filtrar los productos según la búsqueda
     useEffect(() => {
-        const normalizedSearchQuery = String(searchQuery).trim().toLowerCase();
-        if (normalizedSearchQuery) {
+        if (searchQuery) {
             const productosFiltrados = productos.filter(producto =>
-                producto.nombre.toLowerCase().includes(normalizedSearchQuery)
+                producto.nombre.toLowerCase().includes(searchQuery.toLowerCase())
             );
             setProductosFiltrados(productosFiltrados);
         } else {

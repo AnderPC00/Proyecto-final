@@ -1,0 +1,22 @@
+@import 'variables'; // Importamos el archivo de variables SCSS
+
+@media (max-width: 768px) {
+  .producto {
+    padding: $padding-pequeno;
+    margin-bottom: $margin-medio;
+  }
+
+  .navbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .navbar ul {
+    flex-direction: column;
+  }
+
+  .navbar li {
+    margin-left: 0;
+    margin-bottom: $margin-pequeno;
+  }
+}

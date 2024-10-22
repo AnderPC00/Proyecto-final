@@ -1,0 +1,54 @@
+@import 'variables'; // Importamos el archivo de variables SCSS
+
+.carrito {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: $padding-grande;
+}
+
+.lista-productos {
+  list-style: none;
+  padding: 0;
+}
+
+.producto-carrito {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid $color-borde;
+  padding: $padding-pequeno 0;
+}
+
+.imagen-producto {
+  width: 150px;
+  height: auto;
+  object-fit: cover;
+}
+
+.cantidad-control {
+  display: flex;
+  align-items: center;
+}
+
+.cantidad-control input {
+  width: 50px;
+  text-align: center;
+  margin: 0 $margin-pequeno;
+}
+
+.carrito-vacio {
+  text-align: center;
+  padding: $padding-grande;
+}
+
+.carrito-vacio h2 {
+  margin-bottom: $margin-medio;
+}
+
+.carrito-vacio p {
+  margin-bottom: $margin-medio;
+}
+
+.btn {
+  margin-top: $margin-pequeno;
+}
