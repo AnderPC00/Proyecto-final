@@ -62,33 +62,33 @@ const Navbar = ({ onSearch }) => {
               <i className="fas fa-search"></i>
             </button>
           </form>
-          <ul className="navbar-nav ms-auto">
-            {usuario ? (
-              <>
-                <li className="nav-item">
-                  <span className="navbar-text">Bienvenido, {usuario.username}</span>
-                </li>
-                <li className="nav-item">
-                  <button className="btn btn-danger ms-3" onClick={logout}>
-                    <i className="fas fa-sign-out-alt"></i> Cerrar sesión
-                  </button>
-                </li>
-              </>
-            ) : (
-              <>
-                <li className="nav-item">
-                  <Link className="nav-link" to="/login">
-                    <i className="fas fa-sign-in-alt"></i> Iniciar sesión
-                  </Link>
-                </li>
-                <li className="nav-item">
-                  <Link className="nav-link" to="/register">
-                    <i className="fas fa-user-plus"></i> Registrarse
-                  </Link>
-                </li>
-              </>
-            )}
-          </ul>
+            <ul className="navbar-nav ms-auto align-items-center">
+                {usuario ? (
+                    <>
+                        <li className="nav-item">
+                            <span className="navbar-text bienvenido-text">Bienvenido</span>
+                        </li>
+                        <li className="nav-item">
+                            <button className="btn btn-danger ms-3" onClick={logout}>
+                                <i className="fas fa-sign-out-alt"></i> Cerrar sesión
+                            </button>
+                        </li>
+                    </>
+                ) : (
+                    <>
+                        <li className="nav-item">
+                            <Link className="nav-link" to="/login">
+                                <i className="fas fa-sign-in-alt"></i> Iniciar sesión
+                            </Link>
+                        </li>
+                        <li className="nav-item">
+                            <Link className="nav-link" to="/register">
+                                <i className="fas fa-user-plus"></i> Registrarse
+                            </Link>
+                        </li>
+                    </>
+                )}
+            </ul>
         </div>
       </div>
     </nav>

@@ -23,7 +23,7 @@
     background-color: #007bff;
     color: white;
     border: none;
-    border-radius: 8px;
+    border-radius: 5px;
     cursor: pointer;
     transition: background-color 0.3s ease;
 }
@@ -35,13 +35,42 @@
 .stock-disponible {
     color: green;
     font-weight: bold;
+    margin-bottom: 10px;
 }
 
 .sin-stock {
     color: red;
     font-weight: bold;
+    margin-bottom: 10px;
 }
 
 .search-bar {
     margin-bottom: 20px;
+}
+
+.productos-list {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.producto-item {
+    border: 1px solid #ddd;
+    padding: 20px;
+    border-radius: 10px;
+    width: 250px;
+    text-align: center;
+}
+
+.producto-imagen {
+    width: 100px;
+    height: auto;
+    margin-right: 10px;
+}
+
+.producto-imagenes {
+    display: flex;
+    overflow-x: scroll;
 }

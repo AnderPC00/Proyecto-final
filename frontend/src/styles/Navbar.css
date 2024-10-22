@@ -43,6 +43,24 @@
     border-radius: 50%;
 }
 
+.bienvenido-text {
+    margin-right: 20px; /* Ajuste para darle espacio al botón de cerrar sesión */
+    font-size: 1.1em;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+}
+
+.navbar-nav .nav-item {
+    display: flex;
+    align-items: center;
+}
+
+.align-items-center {
+    display: flex;
+    align-items: center;
+}
+
 @media (min-width: 768px) {
 
     .navbar-collapse {

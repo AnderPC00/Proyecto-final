@@ -5,17 +5,17 @@ import '../styles/Productos.css';
 import '../styles/styles.css';
 import { showSuccessMessage, showErrorMessage } from '../utils/alertas';
 
-const Productos = ({ searchQuery = '', resetSearch }) => {
+const Productos = ({ searchQuery = '' }) => {
     const [productos, setProductos] = useState([]);
     const [productosFiltrados, setProductosFiltrados] = useState([]);
-    const { carrito, setCarrito, carritoCount, setCarritoCount } = useContext(AuthContext);
+    const { setCarrito, setCarritoCount } = useContext(AuthContext); // Eliminado carrito y carritoCount si no se usan
 
     // Cargar todos los productos al montar el componente
     useEffect(() => {
         axios.get('http://localhost:5000/api/productos')
             .then(response => {
                 setProductos(response.data);
-                setProductosFiltrados(response.data); // Inicialmente mostrar todos
+                setProductosFiltrados(response.data); // Mostrar todos los productos inicialmente
             })
             .catch(error => {
                 showErrorMessage('Error al cargar los productos');
@@ -26,9 +26,10 @@ const Productos = ({ searchQuery = '', resetSearch }) => {
     useEffect(() => {
         const normalizedSearchQuery = String(searchQuery).trim().toLowerCase();
         if (normalizedSearchQuery) {
-            setProductosFiltrados(productos.filter(producto =>
+            const productosFiltrados = productos.filter(producto =>
                 producto.nombre.toLowerCase().includes(normalizedSearchQuery)
-            ));
+            );
+            setProductosFiltrados(productosFiltrados);
         } else {
             setProductosFiltrados(productos); // Si no hay búsqueda, mostrar todos
         }
@@ -58,20 +59,19 @@ const Productos = ({ searchQuery = '', resetSearch }) => {
         });
     };
 
-    // Función para restablecer todos los productos
-    const mostrarTodos = () => {
-        setProductosFiltrados(productos);
-        if (resetSearch) resetSearch(); // Limpiar la búsqueda en la barra si es necesario
-    };
-
     return (
         <div>
             <h1>Productos Disponibles</h1>
-            <button onClick={mostrarTodos}>Mostrar todos los productos</button>
             {productosFiltrados.length > 0 ? (
-                <ul>
+                <ul className="productos-lista">
                     {productosFiltrados.map(producto => (
-                        <li key={producto.id}>
+                        <li key={producto.id} className="producto-item">
+                            {/* Mostrar la imagen del producto o una imagen por defecto */}
+                            <img 
+                                src={producto.imagen ? producto.imagen : 'http://localhost:5000/static/images/default-image.jpg'} 
+                                alt={producto.nombre} 
+                                className="producto-imagen" 
+                            />
                             <h2>{producto.nombre}</h2>
                             <p>Precio: €{producto.precio}</p>
                             {producto.stock > 0 ? (

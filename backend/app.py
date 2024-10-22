@@ -243,7 +243,13 @@ def api_productos():
     try:
         cnx = get_db_connection()
         cursor = cnx.cursor(dictionary=True)
-        cursor.execute('SELECT id, nombre, precio, stock FROM productos') 
+        # Modificar la consulta SQL para devolver la URL completa de la imagen
+        cursor.execute('''
+            SELECT p.id, p.nombre, p.precio, p.stock, 
+            CONCAT('http://localhost:5000/static/images/', pi.imagen) AS imagen 
+            FROM productos p 
+            LEFT JOIN producto_imagenes pi ON p.id = pi.producto_id
+        ''')
         productos = cursor.fetchall()
         cursor.close()
         cnx.close()
