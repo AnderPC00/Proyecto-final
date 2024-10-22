@@ -304,9 +304,9 @@ def api_productos():
         cnx = get_db_connection()
         cursor = cnx.cursor(dictionary=True)
 
-        # Consulta para obtener productos con variantes e imágenes desde la tabla productos
+        # Consulta para obtener productos con variantes, imágenes y descripciones desde la tabla productos
         cursor.execute("""
-            SELECT p.id, p.nombre, p.precio, p.imagen, 
+            SELECT p.id, p.nombre, p.precio, p.imagen, p.descripcion,
                 GROUP_CONCAT(CONCAT_WS('-', pv.color, pv.capacidad, pv.stock) SEPARATOR ',') AS variantes
             FROM productos p
             LEFT JOIN producto_variantes pv ON p.id = pv.producto_id

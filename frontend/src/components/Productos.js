@@ -182,6 +182,7 @@ const Productos = () => {
                                     )}
                                 </div>
                                 <h2>{producto.nombre}</h2>
+                                <p>{producto.descripcion}</p> {/* Mostrar la descripción del producto */}
                                 <p>Precio: €{producto.precio}</p>
                                 
                                 <p className={stockClase}>
