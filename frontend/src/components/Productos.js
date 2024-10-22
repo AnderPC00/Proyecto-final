@@ -163,7 +163,16 @@ const Productos = () => {
 
                         // Determinar si hay stock total para el producto
                         const stockDisponible = stock[producto.id];
-                        const stockClase = stockDisponible > 0 ? 'stock-disponible' : (stockTotal[producto.id] ? 'stock-por-seleccionar' : 'sin-stock');
+                        let stockClase = '';
+
+                        // Lógica para determinar el mensaje y color
+                        if (selectedColor[producto.id] && selectedCapacidad[producto.id]) {
+                            // Si seleccionamos color y capacidad, mostrar el stock
+                            stockClase = stockDisponible > 0 ? 'stock-disponible' : 'sin-stock';
+                        } else if (!selectedColor[producto.id] || !selectedCapacidad[producto.id]) {
+                            // Si no se seleccionaron opciones, mostrar "Selecciona color y capacidad" en verde si tiene stock
+                            stockClase = stockTotal[producto.id] ? 'stock-por-seleccionar' : 'sin-stock';
+                        }
 
                         return (
                             <li key={`${producto.id}-${selectedColor[producto.id] || 'default'}-${selectedCapacidad[producto.id] || 'default'}`} className="producto-item">
@@ -176,7 +185,9 @@ const Productos = () => {
                                 <p>Precio: €{producto.precio}</p>
                                 
                                 <p className={stockClase}>
-                                    Stock disponible: {stock[producto.id] !== undefined ? stock[producto.id] : 'Selecciona color y capacidad'}
+                                    {selectedColor[producto.id] && selectedCapacidad[producto.id]
+                                        ? `Stock disponible: ${stock[producto.id] !== undefined ? stock[producto.id] : '0'}`
+                                        : 'Stock disponible: Selecciona color y capacidad'}
                                 </p>
 
                                 {colores.length > 0 && capacidades.length > 0 ? (
