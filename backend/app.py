@@ -241,13 +241,15 @@ def productos():
 @app.route('/api/productos', methods=['GET'])
 def api_productos():
     try:
+        # Conexión a la base de datos
         cnx = get_db_connection()
         cursor = cnx.cursor(dictionary=True)
+
+        # Consulta para obtener productos con variantes y sus imágenes
         cursor.execute("""
-            SELECT p.id, p.nombre, p.precio, p.stock, 
+            SELECT p.id, p.nombre, p.precio, 
                 GROUP_CONCAT(pi.imagen SEPARATOR ',') AS imagenes,
-                GROUP_CONCAT(DISTINCT pv.color SEPARATOR ',') AS colores,
-                GROUP_CONCAT(DISTINCT pv.capacidad SEPARATOR ',') AS capacidades
+                GROUP_CONCAT(CONCAT_WS('-', pv.color, pv.capacidad, pv.stock) SEPARATOR ',') AS variantes
             FROM productos p
             LEFT JOIN producto_imagenes pi ON p.id = pi.producto_id
             LEFT JOIN producto_variantes pv ON p.id = pv.producto_id
@@ -255,11 +257,35 @@ def api_productos():
         """)
 
         productos = cursor.fetchall()
+
+        for producto in productos:
+            print(f"Procesando producto: {producto}")
+
+            # Asegurarse de que producto['variantes'] no sea None
+            if producto['variantes'] and isinstance(producto['variantes'], str):
+                print(f"Variantes encontradas: {producto['variantes']}")
+                producto['variantes'] = producto['variantes'].split(',')
+                producto['stock_variantes'] = {
+                    f"{variante.split('-')[0]}-{variante.split('-')[1]}": int(variante.split('-')[2]) 
+                    for variante in producto['variantes']
+                }
+            else:
+                producto['variantes'] = []
+                producto['stock_variantes'] = {}
+                print("No se encontraron variantes")
+
+        # Cerrar conexión con la base de datos
         cursor.close()
         cnx.close()
+
         return jsonify(productos)
+
     except mysql.connector.Error as err:
+        print(f"Error en la base de datos: {err}")
         return jsonify({'error': str(err)}), 500
+    except Exception as e:
+        print(f"Error general: {e}")
+        return jsonify({'error': str(e)}), 500
     
 @app.route('/api/productos_destacados', methods=['GET'])
 def obtener_productos_destacados():
@@ -317,28 +343,48 @@ def api_add_to_cart(producto_id):
     if not color or not capacidad:
         return jsonify({'error': 'Debes seleccionar color y capacidad'}), 400
 
+    cnx = get_db_connection()
+    cursor = cnx.cursor(dictionary=True)
+
+    # Verificar el stock en la tabla producto_variantes
+    query = """
+        SELECT stock FROM producto_variantes
+        WHERE producto_id = %s AND color = %s AND capacidad = %s
+    """
+    cursor.execute(query, (producto_id, color, capacidad))
+    variante = cursor.fetchone()
+
+    if not variante or variante['stock'] < cantidad:
+        cursor.close()
+        cnx.close()
+        return jsonify({'error': 'No hay stock disponible para la variante seleccionada'}), 400
+
+    # Si hay suficiente stock, continuar agregando al carrito
     if 'cart' not in session:
         session['cart'] = {}
 
     cart = session['cart']
     cart_key = f"{producto_id}-{color}-{capacidad}"
 
-    print(f"Recibido: Producto ID={producto_id}, Color={color}, Capacidad={capacidad}, Cantidad={cantidad}")
-    print(f"Cart actual: {cart}")
-
-    # Si el producto ya está en el carrito con la misma variante, actualiza la cantidad
     if cart_key in cart:
-        print(f"Actualizando cantidad de {cart_key}. Cantidad anterior: {cart[cart_key]['cantidad']}")
         cart[cart_key]['cantidad'] += cantidad
     else:
-        # Si no existe, añade el producto con la variante
-        print(f"Añadiendo nuevo producto: {cart_key}")
         cart[cart_key] = {'cantidad': cantidad, 'color': color, 'capacidad': capacidad}
 
     session['cart'] = cart
     session.modified = True  # Asegura que la sesión se actualice
 
-    print(f"Carrito actualizado: {cart}")
+    # Actualizar el stock en la base de datos
+    nuevo_stock = variante['stock'] - cantidad
+    update_query = """
+        UPDATE producto_variantes SET stock = %s
+        WHERE producto_id = %s AND color = %s AND capacidad = %s
+    """
+    cursor.execute(update_query, (nuevo_stock, producto_id, color, capacidad))
+    cnx.commit()
+
+    cursor.close()
+    cnx.close()
 
     return jsonify({'message': 'Producto añadido al carrito correctamente'}), 200
 
@@ -389,10 +435,11 @@ def api_carrito():
             cnx = get_db_connection()
             cursor = cnx.cursor(dictionary=True)
 
-            # Obtener los productos con esos IDs
+            # Obtener los productos con esos IDs y sus variantes
             formato_ids = ','.join(['%s'] * len(producto_ids))
             query = f'''
-                SELECT p.id, p.nombre, p.precio, p.stock, pi.imagen, v.color, v.capacidad
+                SELECT p.id, p.nombre, p.precio, pi.imagen, 
+                       v.color, v.capacidad, v.stock
                 FROM productos p
                 LEFT JOIN producto_imagenes pi ON p.id = pi.producto_id
                 LEFT JOIN producto_variantes v ON p.id = v.producto_id
@@ -415,10 +462,10 @@ def api_carrito():
                             'nombre': producto['nombre'],
                             'precio': producto['precio'],
                             'cantidad': valor['cantidad'],
-                            'stock': producto['stock'],
+                            'stock': producto['stock'],  # Stock por variante
                             'imagen': producto['imagen'],
-                            'color': valor['color'],
-                            'capacidad': valor['capacidad']
+                            'color': producto['color'],
+                            'capacidad': producto['capacidad']
                         })
                         total += producto['precio'] * valor['cantidad']
 
@@ -524,14 +571,34 @@ def api_update_cart(producto_id):
     cart = session['cart']
     cart_key = f"{producto_id}-{color}-{capacidad}"
 
+    # Conectar a la base de datos para verificar el stock de la variante
+    cnx = get_db_connection()
+    cursor = cnx.cursor(dictionary=True)
+
+    # Obtener el stock específico para la combinación de color y capacidad
+    cursor.execute('''
+        SELECT stock FROM producto_variantes 
+        WHERE producto_id = %s AND color = %s AND capacidad = %s
+    ''', (producto_id, color, capacidad))
+    resultado = cursor.fetchone()
+
+    if not resultado:
+        return jsonify({'error': 'Variante no encontrada'}), 404
+
+    stock_disponible = resultado['stock']
+
     # Verificar si el producto con la variante específica está en el carrito
     if cart_key in cart:
+        if nueva_cantidad > stock_disponible:
+            return jsonify({'error': 'No puedes añadir más productos de los que hay en stock'}), 400
+
         if nueva_cantidad > 0:
             # Actualiza la cantidad
             cart[cart_key]['cantidad'] = nueva_cantidad
         else:
             # Si la cantidad es 0 o menor, elimina el producto del carrito
             del cart[cart_key]
+
         session['cart'] = cart
         session.modified = True  # Asegura que la sesión se actualice
         return jsonify({'message': 'Cantidad actualizada correctamente'}), 200

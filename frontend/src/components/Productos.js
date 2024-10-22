@@ -11,6 +11,7 @@ const Productos = ({ searchQuery = '' }) => {
     const { setCarrito, setCarritoCount } = useContext(AuthContext);
     const [selectedColor, setSelectedColor] = useState({});
     const [selectedCapacidad, setSelectedCapacidad] = useState({});
+    const [stock, setStock] = useState({});  // Maneja el stock de la variante seleccionada
 
     // Cargar todos los productos al montar el componente
     useEffect(() => {
@@ -37,18 +38,56 @@ const Productos = ({ searchQuery = '' }) => {
         }
     }, [searchQuery, productos]);
 
+    // Manejar cambio de color
     const handleColorChange = (productoId, color) => {
         setSelectedColor(prev => ({
             ...prev,
             [productoId]: color
         }));
+
+        const producto = productos.find(p => p.id === productoId);
+        const stockVariantes = producto.stock_variantes || {};
+        const stockKey = `${color}-${selectedCapacidad[productoId]}`;
+        const stockDisponible = stockVariantes[stockKey] || 0;
+
+        setStock(prev => ({
+            ...prev,
+            [productoId]: stockDisponible
+        }));
     };
 
+    // Manejar cambio de capacidad
     const handleCapacidadChange = (productoId, capacidad) => {
         setSelectedCapacidad(prev => ({
             ...prev,
             [productoId]: capacidad
         }));
+
+        const colorSeleccionado = selectedColor[productoId];
+        if (colorSeleccionado) {
+            actualizarStock(productoId, colorSeleccionado, capacidad);
+        }
+    };
+
+    // Actualizar stock según color y capacidad seleccionados
+    const actualizarStock = (productoId, color, capacidad) => {
+        const producto = productos.find(p => p.id === productoId);
+        if (!producto || !producto.variantes) {
+            setStock(prev => ({ ...prev, [productoId]: 0 }));
+            return;
+        }
+
+        // Filtrar la variante seleccionada de las variantes disponibles
+        const variante = producto.variantes.find(v => v.startsWith(`${color}-${capacidad}`));
+        if (variante) {
+            const stockDisponible = variante.split('-')[2];  // El tercer valor es el stock
+            setStock(prev => ({
+                ...prev,
+                [productoId]: parseInt(stockDisponible)
+            }));
+        } else {
+            setStock(prev => ({ ...prev, [productoId]: 0 }));
+        }
     };
 
     // Función para añadir un producto al carrito
@@ -58,6 +97,14 @@ const Productos = ({ searchQuery = '' }) => {
 
         if (!color || !capacidad) {
             showErrorMessage('Por favor, selecciona un color y una capacidad');
+            return;
+        }
+
+        // Verificar si hay stock disponible para la variante seleccionada
+        const stockDisponible = stock[productoId] || 0;
+
+        if (stockDisponible < 1) {
+            showErrorMessage('No hay stock disponible para la variante seleccionada');
             return;
         }
 
@@ -90,11 +137,14 @@ const Productos = ({ searchQuery = '' }) => {
                 <ul className="productos-lista">
                     {productosFiltrados.map(producto => {
                         const imagenes = producto.imagenes ? producto.imagenes.split(',') : [];
-                        const colores = producto.colores ? producto.colores.split(',') : [];
-                        const capacidades = producto.capacidades ? producto.capacidades.split(',') : [];
+                        const colores = producto.variantes ? [...new Set(producto.variantes.map(v => v.split('-')[0]))] : [];
+                        const capacidades = producto.variantes ? [...new Set(producto.variantes.map(v => v.split('-')[1]))] : [];
 
                         // Mostrar solo la primera imagen
                         const primeraImagen = imagenes.length > 0 ? imagenes[0] : '';
+
+                        // Clase de estilo condicional según el stock
+                        const stockClase = stock[producto.id] > 0 ? 'stock-disponible' : 'sin-stock';
 
                         return (
                             <li key={`${producto.id}-${selectedColor[producto.id] || 'default'}-${selectedCapacidad[producto.id] || 'default'}`} className="producto-item">
@@ -105,10 +155,14 @@ const Productos = ({ searchQuery = '' }) => {
                                 </div>
                                 <h2>{producto.nombre}</h2>
                                 <p>Precio: €{producto.precio}</p>
-                                {producto.stock > 0 ? (
+                                
+                                {/* Mostrar el stock con estilo condicional */}
+                                <p className={stockClase}>
+                                    Stock disponible: {stock[producto.id] !== undefined ? stock[producto.id] : 'Selecciona color y capacidad'}
+                                </p>
+
+                                {colores.length > 0 && capacidades.length > 0 ? (
                                     <>
-                                        <p className="stock-disponible">Stock disponible: {producto.stock}</p>
-                                        
                                         {/* Selector de color */}
                                         <label>Color:</label>
                                         <select value={selectedColor[producto.id] || ''} onChange={(e) => handleColorChange(producto.id, e.target.value)}>
