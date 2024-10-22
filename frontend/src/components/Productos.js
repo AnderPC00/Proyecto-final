@@ -155,11 +155,11 @@ const Productos = () => {
             {productosFiltrados.length > 0 ? (
                 <ul className="productos-lista">
                     {productosFiltrados.map(producto => {
-                        const imagenes = producto.imagenes ? producto.imagenes.split(',') : [];
+                        const imagen = producto.imagen; // Obtener la imagen directamente de la tabla productos
                         const colores = producto.variantes ? [...new Set(producto.variantes.map(v => v.split('-')[0]))] : [];
                         const capacidades = producto.variantes ? [...new Set(producto.variantes.map(v => v.split('-')[1]))] : [];
 
-                        const primeraImagen = imagenes.length > 0 ? imagenes[0] : '';
+                        const primeraImagen = imagen ? imagen : ''; // Obtener la imagen si está disponible
 
                         // Determinar si hay stock total para el producto
                         const stockDisponible = stock[producto.id];

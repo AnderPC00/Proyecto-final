@@ -27,18 +27,15 @@ function Home() {
         {productosDestacados.length > 0 ? (
           productosDestacados.map(producto => {
             // Verifica si hay imágenes en los datos recibidos
-            const imagenes = producto.imagenes ? producto.imagenes.split(",") : [];
-            const primeraImagen = imagenes.length > 0 ? imagenes[0] : "";
+            const primeraImagen = producto.imagenes ? producto.imagenes : "default.jpg";
 
             return (
               <div key={producto.id} className="producto">
-                {primeraImagen && (
-                  <img 
-                    src={`http://localhost:5000/static/images/${primeraImagen}`} 
-                    alt={producto.nombre} 
-                    className="producto-destacado-imagen"
-                  />
-                )}
+                <img 
+                  src={`http://localhost:5000/static/images/${primeraImagen}`} 
+                  alt={producto.nombre} 
+                  className="producto-destacado-imagen"
+                />
                 <h3>{producto.nombre}</h3>
                 <p>Precio: €{producto.precio}</p>
                 {/* Redirigir a la página de productos pero pasando el nombre como filtro en la URL */}

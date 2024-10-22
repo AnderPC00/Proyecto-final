@@ -3,17 +3,25 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from flask_cors import CORS
 from flask_session import Session
 from werkzeug.security import generate_password_hash, check_password_hash
-import mysql.connector
-import re
+import mysql.connector, re, os
+import pandas as pd
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+
+UPLOAD_FOLDER = 'uploads/'
+ALLOWED_EXTENSIONS = {'csv', 'xlsx'}
 
 app.secret_key = '2163'
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SECRET_KEY'] = '2163'
 app.config['SESSION_PERMANENT'] = False
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 Session(app)
 CORS(app, supports_credentials=True)
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Configuración de Flask-Login
 login_manager = LoginManager()
@@ -22,9 +30,11 @@ login_manager.login_view = 'login'
 
 # Crear un modelo de usuario
 class User(UserMixin):
-    def __init__(self, id):
+    def __init__(self, id, rol=None, username=None, email=None):
         self.id = id
-        # Puedes agregar más atributos si es necesario, por ejemplo, username, email, etc.
+        self.rol = rol  # Agregamos el rol
+        self.username = username  # Puedes agregar otros atributos, como el nombre de usuario
+        self.email = email  # También puedes incluir el email si lo necesitas
 
     def get_id(self):
         return str(self.id)
@@ -40,13 +50,18 @@ def load_user(user_id):
     cursor = cnx.cursor(dictionary=True)
     
     # Consultar la base de datos para obtener la información del usuario
-    cursor.execute('SELECT * FROM usuarios WHERE id = %s', (user_id,))
+    cursor.execute('SELECT id, rol, username, email FROM usuarios WHERE id = %s', (user_id,))
     user_data = cursor.fetchone()
     cnx.close()
 
     if user_data:
-        # Retornar el objeto User con los datos del usuario autenticado
-        return User(user_data['id'])
+        # Retornar el objeto User con los datos del usuario autenticado, incluyendo el rol y otros atributos
+        return User(
+            user_data['id'],
+            rol=user_data.get('rol'),  # Obtenemos el rol del usuario
+            username=user_data.get('username'),  # Incluir el nombre de usuario
+            email=user_data.get('email')  # Incluir el email
+        )
     return None
 
 # Configuración de la conexión a la base de datos MySQL
@@ -289,13 +304,11 @@ def api_productos():
         cnx = get_db_connection()
         cursor = cnx.cursor(dictionary=True)
 
-        # Consulta para obtener productos con variantes y sus imágenes
+        # Consulta para obtener productos con variantes e imágenes desde la tabla productos
         cursor.execute("""
-            SELECT p.id, p.nombre, p.precio, 
-                GROUP_CONCAT(pi.imagen SEPARATOR ',') AS imagenes,
+            SELECT p.id, p.nombre, p.precio, p.imagen, 
                 GROUP_CONCAT(CONCAT_WS('-', pv.color, pv.capacidad, pv.stock) SEPARATOR ',') AS variantes
             FROM productos p
-            LEFT JOIN producto_imagenes pi ON p.id = pi.producto_id
             LEFT JOIN producto_variantes pv ON p.id = pv.producto_id
             GROUP BY p.id
         """)
@@ -337,13 +350,10 @@ def obtener_productos_destacados():
         cnx = get_db_connection()
         cursor = cnx.cursor(dictionary=True)
 
-        # Consulta para obtener los productos destacados con imágenes
+        # Aseguramos que se obtengan las imágenes desde la tabla productos
         query = '''
-            SELECT p.id, p.nombre, p.precio, 
-                GROUP_CONCAT(DISTINCT pi.imagen SEPARATOR ',') AS imagenes
+            SELECT p.id, p.nombre, p.precio, p.imagen AS imagenes
             FROM productos p
-            LEFT JOIN producto_imagenes pi ON p.id = pi.producto_id
-            GROUP BY p.id
             LIMIT 5
         '''
         cursor.execute(query)
@@ -904,6 +914,74 @@ def obtener_producto():
 
     cnx.close()
     return jsonify(producto)
+
+@app.route('/api/importar_productos', methods=['POST'])
+@login_required  # Asegúrate de que el usuario esté autenticado
+def importar_productos():
+    if current_user.rol != 'admin':  # Solo permitir a administradores
+        return jsonify({'error': 'No tienes permiso para realizar esta acción.'}), 403
+
+    file = request.files.get('file')
+    
+    if not file:
+        return jsonify({'error': 'No se ha proporcionado un archivo.'}), 400
+    
+    filename = secure_filename(file.filename)
+
+    upload_folder = 'uploads'
+    if not os.path.exists(upload_folder):
+        os.makedirs(upload_folder)
+
+    filepath = os.path.join(upload_folder, filename)
+    file.save(filepath)
+
+    try:
+        cnx = get_db_connection()
+        cursor = cnx.cursor()
+
+        if filename.endswith('.csv'):
+            df = pd.read_csv(filepath)
+        elif filename.endswith('.xlsx') or filename.endswith('.xls'):
+            df = pd.read_excel(filepath)
+        else:
+            return jsonify({'error': 'Formato de archivo no compatible. Solo se permiten archivos CSV y Excel.'}), 400
+
+        required_columns = ['nombre', 'descripcion', 'precio', 'imagen_url', 'imagen']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            return jsonify({'error': f'Faltan las siguientes columnas requeridas: {missing_columns}'}), 400
+
+        for _, row in df.iterrows():
+            cursor.execute('SELECT id FROM productos WHERE nombre = %s', (row['nombre'],))
+            existing_product = cursor.fetchone()
+
+            if existing_product:
+                cursor.execute('''
+                    UPDATE productos
+                    SET descripcion = %s, precio = %s, imagen_url = %s, imagen = %s
+                    WHERE id = %s
+                ''', (row['descripcion'], row['precio'], row['imagen_url'], row['imagen'], existing_product['id']))
+            else:
+                cursor.execute('''
+                    INSERT INTO productos (nombre, descripcion, precio, imagen_url, imagen)
+                    VALUES (%s, %s, %s, %s, %s)
+                ''', (row['nombre'], row['descripcion'], row['precio'], row['imagen_url'], row['imagen']))
+
+        cnx.commit()
+
+    except Exception as e:
+        cnx.rollback()
+        return jsonify({'error': str(e)}), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if cnx:
+            cnx.close()
+        if os.path.exists(filepath):
+            os.remove(filepath)
+
+    return jsonify({'message': 'Productos importados correctamente.'})
 
 if __name__ == '__main__':
     app.run(debug=True)

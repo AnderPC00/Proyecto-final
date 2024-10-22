@@ -25,7 +25,7 @@ const Destacados = () => {
                     productosDestacados.map(producto => (
                         <div key={producto.id} className="producto">
                             <img
-                                src={`http://localhost:5000/static/images/${producto.imagenes ? producto.imagenes.split(',')[0] : 'default.jpg'}`}
+                                src={`http://localhost:5000/static/images/${producto.imagen_url ? producto.imagen_url : 'default.jpg'}`}
                                 alt={producto.nombre}
                                 className="producto-imagen"
                             />
