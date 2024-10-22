@@ -148,8 +148,8 @@ const Checkout = () => {
                                 onChange={(e) => setDireccionSeleccionada(e.target.value)}
                             >
                                 <option value="">Seleccionar una dirección</option>
-                                {direcciones.map((direccion) => (
-                                    <option key={direccion.id} value={direccion.direccion}>
+                                {direcciones.map((direccion, index) => (
+                                    <option key={index} value={direccion.direccion}>
                                         {`${direccion.direccion}, ${direccion.ciudad}, ${direccion.provincia}, ${direccion.codigo_postal}, ${direccion.pais}`}
                                     </option>
                                 ))}
